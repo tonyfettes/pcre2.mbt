@@ -1,0 +1,11 @@
+{
+  "is-main": true,
+  "import": [
+    "tonyfettes/pcre2"
+  ],
+  "link": {
+    "native": {
+      "cc": "echo"
+    }
+  }
+}

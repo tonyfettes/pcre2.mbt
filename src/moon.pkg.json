@@ -1,0 +1,6 @@
+{
+  "import": [
+    "tonyfettes/c",
+    "moonbitlang/x/encoding"
+  ]
+}
