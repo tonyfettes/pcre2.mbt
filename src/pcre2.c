@@ -1,6 +1,6 @@
 #include <stdint.h>
 #define PCRE2_CODE_UNIT_WIDTH 16
-#include "pcre2.h"
+#include "pcre2-16/pcre2.h"
 #include <moonbit.h>
 
 #define static_assert_type_equal(type, expected)                               \
@@ -12,6 +12,11 @@ int32_t
 moonbit_pcre2_ERROR_NOMATCH() {
   PCRE2_SPTR16 a;
   return PCRE2_ERROR_NOMATCH;
+}
+
+int32_t
+moonbit_pcre2_ERROR_NOMEMORY() {
+  return PCRE2_ERROR_NOMEMORY;
 }
 
 uint32_t
@@ -182,6 +187,11 @@ moonbit_pcre2_NEWLINE_ANYCRLF() {
 uint32_t
 moonbit_pcre2_NEWLINE_NUL() {
   return PCRE2_NEWLINE_NUL;
+}
+
+uint32_t
+moonbit_pcre2_SUBSTITUTE_OVERFLOW_LENGTH() {
+  return PCRE2_SUBSTITUTE_OVERFLOW_LENGTH;
 }
 
 pcre2_code *
