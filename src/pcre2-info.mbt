@@ -77,20 +77,6 @@ extern "c" fn pcre2_INFO_NEWLINE() -> UInt = "moonbit_pcre2_INFO_NEWLINE"
 extern "c" fn pcre2_INFO_SIZE() -> UInt = "moonbit_pcre2_INFO_SIZE"
 
 ///|
-extern "c" fn pcre2_pattern_info_16(
-  code : Pcre2Code,
-  what : UInt,
-  where_ : @c.Pointer[Unit]
-) -> Int = "pcre2_pattern_info_16"
-
-///|
-extern "c" fn pcre2_pattern_info_8(
-  code : Pcre2Code,
-  what : UInt,
-  where_ : @c.Pointer[Unit]
-) -> Int = "pcre2_pattern_info_8"
-
-///|
 priv enum Pcre2Newline {
   CR
   LF

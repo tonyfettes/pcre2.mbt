@@ -1,6 +1,7 @@
 {
   "import": [
-    "tonyfettes/c"
+    "tonyfettes/c",
+    "moonbitlang/x/encoding"
   ],
   "native-stub": [
     "pcre2.c",

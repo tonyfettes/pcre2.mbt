@@ -1,11 +1,4 @@
 ///|
-extern "c" fn pcre2_get_error_message(
-  errorcode : Int,
-  buffer : String,
-  bufflen : Pcre2Size
-) -> Int = "pcre2_get_error_message_16"
-
-///|
 priv extern type Pcre2Code
 
 ///|
@@ -32,32 +25,6 @@ pub fn Code::free(self : Code) -> Unit {
 
 ///|
 priv extern type Pcre2CompileContext
-
-///|
-extern "c" fn pcre2_compile_16(
-  pattern : String,
-  length : Int,
-  options : UInt,
-  errorcode : FixedArray[Int],
-  erroroffset : FixedArray[Pcre2Size],
-  context : @c.Nullable[Pcre2CompileContext]
-) -> Pcre2Code = "pcre2_compile_16"
-
-///|
-extern "c" fn pcre2_code_free_16(code : Pcre2Code) = "pcre2_code_free_16"
-
-///|
-extern "c" fn pcre2_compile_8(
-  pattern : Bytes,
-  length : Int,
-  options : UInt,
-  errorcode : FixedArray[Int],
-  erroroffset : FixedArray[Pcre2Size],
-  context : @c.Nullable[Pcre2CompileContext]
-) -> Pcre2Code = "pcre2_compile_8"
-
-///|
-extern "c" fn pcre2_code_free_8(code : Pcre2Code) = "pcre2_code_free_8"
 
 ///|
 priv extern type Pcre2GeneralContext
@@ -168,38 +135,7 @@ pub fn Match::captures[T](self : Match[T]) -> Iter2[T, Capture[T]] {
 }
 
 ///|
-extern "c" fn pcre2_match_data_create_from_pattern(
-  code : Pcre2Code,
-  context : @c.Nullable[Pcre2GeneralContext]
-) -> Pcre2MatchData = "pcre2_match_data_create_from_pattern_16"
-
-///|
-extern "c" fn pcre2_match_data_free(match_data : Pcre2MatchData) = "pcre2_match_data_free_16"
-
-///|
 priv extern type Pcre2MatchContext
-
-///|
-extern "c" fn pcre2_match_16(
-  code : Pcre2Code,
-  subject : String,
-  length : Pcre2Size,
-  start_offset : Pcre2Size,
-  options : UInt,
-  match_data : Pcre2MatchData,
-  context : @c.Nullable[Pcre2MatchContext]
-) -> Int = "pcre2_match_16"
-
-///|
-extern "c" fn pcre2_match_8(
-  code : Pcre2Code,
-  subject : Bytes,
-  length : Pcre2Size,
-  start_offset : Pcre2Size,
-  options : UInt,
-  match_data : Pcre2MatchData,
-  context : @c.Nullable[Pcre2MatchContext]
-) -> Int = "pcre2_match_8"
 
 ///|
 extern "c" fn pcre2_ERROR_NOMATCH() -> Int = "moonbit_pcre2_ERROR_NOMATCH"
@@ -295,9 +231,9 @@ fn code_unit_to_character(
 pub fn Code::match_bytes(self : Code, subject : Bytes) -> Ater[Match[Bytes]] {
   // The following code has been adapted from the pcre2demo.c file in the PCRE2
   // library.
-  let match_data = pcre2_match_data_create_from_pattern(
+  let match_data = pcre2_match_data_create_from_pattern_8(
     self._,
-    @c.Nullable::none(),
+    @c.none(),
   )
   let subject_length = subject.length().to_uint64()
   let crlf_is_newline = match pcre2_pattern_info_newline(self._) {
@@ -309,11 +245,13 @@ pub fn Code::match_bytes(self : Code, subject : Bytes) -> Ater[Match[Bytes]] {
   let name_table = pcre2_pattern_info_name_table_8(self._)
   let name_entry_size = pcre2_pattern_info_name_entry_size(self._).reinterpret_as_int()
   fn pcre2_error(rc) -> Unit!Pcre2Error {
-    let string = String::make(256, '\x00')
+    let string = Bytes::make(256, b'\x00')
     let length = string.length().to_uint64()
-    let length = pcre2_get_error_message(rc, string, length)
-    pcre2_match_data_free(match_data)
-    raise Pcre2Error::Error([..string[:length]])
+    let length = pcre2_get_error_message_8(rc, string, length)
+    pcre2_match_data_free_8(match_data)
+    let message : Bytes = [..string[:length]]
+    let message = @encoding.decoder(UTF8).decode_lossy(message)
+    raise Pcre2Error::Error(message)
   }
 
   fn() {
@@ -331,7 +269,7 @@ pub fn Code::match_bytes(self : Code, subject : Bytes) -> Ater[Match[Bytes]] {
         if rc == pcre2_ERROR_NOMATCH() {
           break
         }
-        ovector = pcre2_get_ovector_pointer(match_data)
+        ovector = pcre2_get_ovector_pointer_8(match_data)
         rc
       } else {
         let mut options = 0U // Normally no options
@@ -421,7 +359,7 @@ pub fn Code::match_bytes(self : Code, subject : Bytes) -> Ater[Match[Bytes]] {
       // demonstration program, we just detect this case and give up.
 
       if ovector[0] > ovector[1] {
-        pcre2_match_data_free(match_data)
+        pcre2_match_data_free_8(match_data)
         raise LookaroundBSK
       }
 
@@ -460,7 +398,7 @@ pub fn Code::match_bytes(self : Code, subject : Bytes) -> Ater[Match[Bytes]] {
       }
       return Some(match_)
     }
-    pcre2_match_data_free(match_data)
+    pcre2_match_data_free_8(match_data)
     None
   }
 }
@@ -469,7 +407,7 @@ pub fn Code::match_bytes(self : Code, subject : Bytes) -> Ater[Match[Bytes]] {
 pub fn Code::match_string(self : Code, subject : String) -> Ater[Match[String]] {
   // The following code has been adapted from the pcre2demo.c file in the PCRE2
   // library.
-  let match_data = pcre2_match_data_create_from_pattern(
+  let match_data = pcre2_match_data_create_from_pattern_16(
     self._,
     @c.Nullable::none(),
   )
@@ -487,8 +425,8 @@ pub fn Code::match_string(self : Code, subject : String) -> Ater[Match[String]] 
   fn pcre2_error(rc) -> Unit!Pcre2Error {
     let string = String::make(256, '\x00')
     let length = string.length().to_uint64()
-    let length = pcre2_get_error_message(rc, string, length)
-    pcre2_match_data_free(match_data)
+    let length = pcre2_get_error_message_16(rc, string, length)
+    pcre2_match_data_free_16(match_data)
     raise Pcre2Error::Error([..string[:length]])
   }
 
@@ -528,7 +466,7 @@ pub fn Code::match_string(self : Code, subject : String) -> Ater[Match[String]] 
         if rc == pcre2_ERROR_NOMATCH() {
           break
         }
-        ovector = pcre2_get_ovector_pointer(match_data)
+        ovector = pcre2_get_ovector_pointer_16(match_data)
         rc
       } else {
         let mut options = 0U // Normally no options
@@ -619,7 +557,7 @@ pub fn Code::match_string(self : Code, subject : String) -> Ater[Match[String]] 
       // demonstration program, we just detect this case and give up.
 
       if ovector[0] > ovector[1] {
-        pcre2_match_data_free(match_data)
+        pcre2_match_data_free_16(match_data)
         raise LookaroundBSK
       }
 
@@ -673,36 +611,13 @@ pub fn Code::match_string(self : Code, subject : String) -> Ater[Match[String]] 
       }
       return Some(match_)
     }
-    pcre2_match_data_free(match_data)
+    pcre2_match_data_free_16(match_data)
     None
   }
 }
 
 ///|
 typealias Pcre2Size = UInt64
-
-///|
-extern "c" fn pcre2_get_ovector_pointer(
-  match_data : Pcre2MatchData
-) -> @c.Pointer[Pcre2Size] = "pcre2_get_ovector_pointer_16"
-
-///|
-typealias Pcre2Uchar = UInt16
-
-///|
-extern "c" fn pcre2_substitute(
-  code : Pcre2Code,
-  subject : String,
-  length : Pcre2Size,
-  start_offset : Int,
-  options : UInt,
-  match_data : Pcre2MatchData,
-  mcontext : @c.Nullable[Pcre2MatchContext],
-  replacement : String,
-  rlength : Pcre2Size,
-  outputbuffer : String,
-  outlengthptr : FixedArray[Pcre2Size]
-) -> Int = "pcre2_substitute_16"
 
 ///|
 extern "c" fn pcre2_SUBSTITUTE_OVERFLOW_LENGTH() -> UInt = "moonbit_pcre2_SUBSTITUTE_OVERFLOW_LENGTH"
@@ -716,7 +631,7 @@ pub fn substitute(
   subject : String,
   replacement : String
 ) -> String {
-  let match_data = pcre2_match_data_create_from_pattern(
+  let match_data = pcre2_match_data_create_from_pattern_16(
     self._,
     @c.Nullable::none(),
   )
@@ -735,8 +650,8 @@ pub fn substitute(
   fn pcre2_error(rc) -> Unit!Pcre2Error {
     let string = String::make(256, '\x00')
     let length = string.length().to_uint64()
-    let length = pcre2_get_error_message(rc, string, length)
-    pcre2_match_data_free(match_data)
+    let length = pcre2_get_error_message_16(rc, string, length)
+    pcre2_match_data_free_16(match_data)
     raise Pcre2Error::Error([..string[:length]])
   }
 
@@ -766,7 +681,7 @@ pub fn substitute(
     let output = String::make(output_length[0].to_int(), '\x00')
     let options = pcre2_SUBSTITUTE_OVERFLOW_LENGTH()
     let start_offset = 0
-    let rc = pcre2_substitute(
+    let rc = pcre2_substitute_16(
       self._,
       subject,
       subject_length,
@@ -799,7 +714,7 @@ priv enum Pcre2BSR {
 ///|
 priv enum Pcre2InfoFirstCodeType {
   NothingSet
-    FirstCodeUnitIsSet
+  FirstCodeUnitIsSet
   StartOfStringOrAfterNewline
 }
 
@@ -808,9 +723,3 @@ priv enum Pcre2InfoLastCodeType {
   NothingSet
   CodeUnitIsSet
 }
-
-///|
-extern "c" fn pcre2_get_startchar_16(match_data : Pcre2MatchData) -> Pcre2Size = "pcre2_get_startchar_16"
-
-///|
-extern "c" fn pcre2_get_startchar_8(match_data : Pcre2MatchData) -> Pcre2Size = "pcre2_get_startchar_8"

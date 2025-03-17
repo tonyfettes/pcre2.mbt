@@ -78,7 +78,12 @@ def prepare(source: Path, target: Path, code_unit_width: int = 8 | 16 | 32):
             continue
         shutil.copy(source / s, t)
         prepend_macros(t, macros)
-    moon_pkg_json = {"native-stub": sources}
+    moon_pkg_json = {
+        "import": [
+            "tonyfettes/c"
+        ],
+        "native-stub": sources
+    }
     (target / "moon.pkg.json").write_text(json.dumps(moon_pkg_json, indent=2))
 
     moon_pkg_json = json.loads(Path("src/moon.pkg.json").read_text())
