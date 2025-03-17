@@ -3,14 +3,14 @@ type Code Pcre2Code
 
 ///|
 pub fn compile(pattern : String) -> Code {
-  let errorcode = FixedArray::make(1, 0)
-  let erroroffset = FixedArray::make(1, (0 : Pcre2Size))
+  let error_code = FixedArray::make(1, 0)
+  let error_offset = FixedArray::make(1, (0 : Pcre2Size))
   pcre2_compile(
     pattern,
     pattern.length(),
     0,
-    errorcode,
-    erroroffset,
+    error_code,
+    error_offset,
     @c.Nullable::of(None),
   )
 }
