@@ -7,6 +7,11 @@ def test(publish: Path):
     subprocess.run(["moon", "test", "--target", "native"], cwd=publish, check=True)
 
 
+def clean(publish: Path):
+    subprocess.run(["moon", "clean"], cwd=publish, check=True)
+    shutil.rmtree(publish / ".mooncakes")
+
+
 def main():
     publish_path = Path("publish")
     if publish_path.exists():
@@ -22,6 +27,9 @@ def main():
     test(publish_path)
     for test_path in (publish_path / "src").rglob("*_test.mbt"):
         test_path.unlink()
+    for mbti_path in (publish_path / "src").rglob("*.mbti"):
+        mbti_path.unlink()
+    clean(publish_path)
     subprocess.run(["moon", "publish"], cwd=publish_path)
 
 
