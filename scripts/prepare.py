@@ -38,7 +38,7 @@ sources = [
 ]
 
 
-def prepend_macros(file: Path, macros: list[(str, str)]):
+def prepend_macros(file: Path, macros: list[tuple[str, str]]):
     content = file.read_text()
     for macro in macros:
         content = f"#define {macro[0]} {macro[1]}\n" + content
@@ -94,7 +94,6 @@ def prepare(source: Path, target: Path, code_unit_width: int = 8 | 16 | 32):
 
 
 def main():
-    prepare(Path("src/pcre2/src"), Path("src/pcre2_8"), code_unit_width=8)
     prepare(Path("src/pcre2/src"), Path("src/pcre2_16"), code_unit_width=16)
 
 
