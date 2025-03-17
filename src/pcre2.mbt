@@ -21,19 +21,19 @@ pub fn Code::free(self : Code) -> Unit {
 }
 
 ///|
-struct Capture[T] {
-  match_ : Match[T]
-  name : T
+struct Capture {
+  match_ : Match
+  name : String
   index : Int
 }
 
 ///|
-pub fn Capture::name[T](self : Capture[T]) -> T {
+pub fn Capture::name(self : Capture) -> String {
   self.name
 }
 
 ///|
-pub fn Capture::range[T](self : Capture[T]) -> (Int, Int) {
+pub fn Capture::range(self : Capture) -> (Int, Int) {
   let start = self.match_.character_offsets[self.index * 2]
   let end = self.match_.character_offsets[self.index * 2 + 1]
   (start, end)
@@ -53,7 +53,7 @@ extern "c" fn Pcre2StringView::to(self : Pcre2StringView) -> @string.View = "moo
 extern "c" fn Pcre2StringView::of(view : @string.View) -> Pcre2StringView = "moonbit_c_identity"
 
 ///|
-pub fn Capture::view(self : Capture[String]) -> @string.View {
+pub fn Capture::view(self : Capture) -> @string.View {
   let start = self.match_.code_unit_offsets[self.index * 2]
   let end = self.match_.code_unit_offsets[self.index * 2 + 1]
   let view = Pcre2StringView::{ str: self.match_.subject, start, end }
@@ -61,20 +61,20 @@ pub fn Capture::view(self : Capture[String]) -> @string.View {
 }
 
 ///|
-struct Match[T] {
-  subject : T
+struct Match {
+  subject : String
   code_unit_offsets : FixedArray[Int]
   character_offsets : FixedArray[Int]
-  captures : Array[Capture[T]]
+  captures : Array[Capture]
 }
 
 ///|
-pub fn Match::offsets[T](self : Match[T]) -> Iter[Int] {
+pub fn Match::offsets(self : Match) -> Iter[Int] {
   self.character_offsets.iter()
 }
 
 ///|
-pub fn Match::ranges[T](self : Match[T]) -> Iter2[Int, Int] {
+pub fn Match::ranges(self : Match) -> Iter2[Int, Int] {
   Iter2::new(fn(yield_) {
     for i in 0..<(self.character_offsets.length() / 2) {
       match
@@ -88,7 +88,7 @@ pub fn Match::ranges[T](self : Match[T]) -> Iter2[Int, Int] {
 }
 
 ///|
-pub fn Match::captures[T](self : Match[T]) -> Iter2[T, Capture[T]] {
+pub fn Match::captures(self : Match) -> Iter2[String, Capture] {
   Iter2::new(fn(yield_) {
     for capture in self.captures {
       let name = capture.name
@@ -187,7 +187,7 @@ fn code_unit_to_character(
 }
 
 ///|
-pub fn Code::matches(self : Code, subject : String) -> Ator[Match[String]] {
+pub fn Code::matches(self : Code, subject : String) -> Ator[Match] {
   // The following code has been adapted from the pcre2demo.c file in the PCRE2
   // library.
   let match_data = pcre2_match_data_create_from_pattern(
