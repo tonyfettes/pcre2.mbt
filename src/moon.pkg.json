@@ -1,5 +1,7 @@
 {
-  "import": ["tonyfettes/c"],
+  "import": [
+    "tonyfettes/c"
+  ],
   "native-stub": [
     "pcre2.c",
     "pcre2-16/pcre2_auto_possess.c",

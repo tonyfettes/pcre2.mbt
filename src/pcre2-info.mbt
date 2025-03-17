@@ -77,11 +77,18 @@ extern "c" fn pcre2_INFO_NEWLINE() -> UInt = "moonbit_pcre2_INFO_NEWLINE"
 extern "c" fn pcre2_INFO_SIZE() -> UInt = "moonbit_pcre2_INFO_SIZE"
 
 ///|
-extern "c" fn pcre2_pattern_info(
+extern "c" fn pcre2_pattern_info_16(
   code : Pcre2Code,
   what : UInt,
   where_ : @c.Pointer[Unit]
 ) -> Int = "pcre2_pattern_info_16"
+
+///|
+extern "c" fn pcre2_pattern_info_8(
+  code : Pcre2Code,
+  what : UInt,
+  where_ : @c.Pointer[Unit]
+) -> Int = "pcre2_pattern_info_8"
 
 ///|
 priv enum Pcre2Newline {
@@ -128,7 +135,7 @@ extern "c" fn pcre2_NEWLINE_ANYCRLF() -> UInt = "moonbit_pcre2_NEWLINE_ANYCRLF"
 ///|
 fn pcre2_pattern_info_newline(code : Pcre2Code) -> Pcre2Newline {
   let newline = FixedArray::make(1, 0U)
-  let _ = pcre2_pattern_info(
+  let _ = pcre2_pattern_info_16(
     code,
     pcre2_INFO_NEWLINE(),
     @c.Pointer::of_array(newline).cast(),
@@ -139,7 +146,7 @@ fn pcre2_pattern_info_newline(code : Pcre2Code) -> Pcre2Newline {
 ///|
 fn pcre2_pattern_info_name_count(code : Pcre2Code) -> UInt {
   let name_count = FixedArray::make(1, 0U)
-  let _ = pcre2_pattern_info(
+  let _ = pcre2_pattern_info_16(
     code,
     pcre2_INFO_NAMECOUNT(),
     @c.Pointer::of_array(name_count).cast(),
@@ -148,9 +155,19 @@ fn pcre2_pattern_info_name_count(code : Pcre2Code) -> UInt {
 }
 
 ///|
-fn pcre2_pattern_info_name_table(code : Pcre2Code) -> Pcre2Sptr {
+fn pcre2_pattern_info_name_table_16(code : Pcre2Code) -> @c.Pointer[UInt16] {
   let name_table = FixedArray::make(1, @c.null())
-  let _ = pcre2_pattern_info(
+  let _ = pcre2_pattern_info_16(
+    code,
+    pcre2_INFO_NAMETABLE(),
+    @c.Pointer::of_array(name_table).cast(),
+  )
+  name_table[0]
+}
+
+fn pcre2_pattern_info_name_table_8(code : Pcre2Code) -> @c.Pointer[Byte] {
+  let name_table = FixedArray::make(1, @c.null())
+  let _ = pcre2_pattern_info_8(
     code,
     pcre2_INFO_NAMETABLE(),
     @c.Pointer::of_array(name_table).cast(),
@@ -161,7 +178,7 @@ fn pcre2_pattern_info_name_table(code : Pcre2Code) -> Pcre2Sptr {
 ///|
 fn pcre2_pattern_info_name_entry_size(code : Pcre2Code) -> UInt {
   let name_entry_size = FixedArray::make(1, 0U)
-  let _ = pcre2_pattern_info(
+  let _ = pcre2_pattern_info_16(
     code,
     pcre2_INFO_NAMEENTRYSIZE(),
     @c.Pointer::of_array(name_entry_size).cast(),
