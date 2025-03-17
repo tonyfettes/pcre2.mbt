@@ -1,6 +1,6 @@
 #include <stdint.h>
 #define PCRE2_CODE_UNIT_WIDTH 16
-#include "pcre2-16/pcre2.h"
+#include "pcre2_16/pcre2.h"
 #include <moonbit.h>
 
 #define static_assert_type_equal(type, expected)                               \

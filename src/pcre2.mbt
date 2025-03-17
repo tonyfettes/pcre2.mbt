@@ -1,14 +1,11 @@
 ///|
-priv extern type Pcre2Code
-
-///|
 type Code Pcre2Code
 
 ///|
 pub fn compile(pattern : String) -> Code {
   let errorcode = FixedArray::make(1, 0)
   let erroroffset = FixedArray::make(1, (0 : Pcre2Size))
-  pcre2_compile_16(
+  pcre2_compile(
     pattern,
     pattern.length(),
     0,
@@ -20,17 +17,8 @@ pub fn compile(pattern : String) -> Code {
 
 ///|
 pub fn Code::free(self : Code) -> Unit {
-  pcre2_code_free_16(self._)
+  pcre2_code_free(self._)
 }
-
-///|
-priv extern type Pcre2CompileContext
-
-///|
-priv extern type Pcre2GeneralContext
-
-///|
-priv extern type Pcre2MatchData
 
 ///|
 struct Capture[T] {
@@ -65,31 +53,10 @@ extern "c" fn Pcre2StringView::to(self : Pcre2StringView) -> @string.View = "moo
 extern "c" fn Pcre2StringView::of(view : @string.View) -> Pcre2StringView = "moonbit_c_identity"
 
 ///|
-priv struct Pcre2BytesView {
-  bytes : Bytes
-  start : Int
-  end : Int
-}
-
-///|
-extern "c" fn Pcre2BytesView::to(self : Pcre2BytesView) -> @bytes.View = "moonbit_c_identity"
-
-///|
-extern "c" fn Pcre2BytesView::of(view : @bytes.View) -> Pcre2BytesView = "moonbit_c_identity"
-
-///|
-pub fn Capture::string_view(self : Capture[String]) -> @string.View {
+pub fn Capture::view(self : Capture[String]) -> @string.View {
   let start = self.match_.code_unit_offsets[self.index * 2]
   let end = self.match_.code_unit_offsets[self.index * 2 + 1]
   let view = Pcre2StringView::{ str: self.match_.subject, start, end }
-  view.to()
-}
-
-///|
-pub fn Capture::bytes_view(self : Capture[Bytes]) -> @bytes.View {
-  let start = self.match_.code_unit_offsets[self.index * 2]
-  let end = self.match_.code_unit_offsets[self.index * 2 + 1]
-  let view = Pcre2BytesView::{ bytes: self.match_.subject, start, end }
   view.to()
 }
 
@@ -135,9 +102,6 @@ pub fn Match::captures[T](self : Match[T]) -> Iter2[T, Capture[T]] {
 }
 
 ///|
-priv extern type Pcre2MatchContext
-
-///|
 extern "c" fn pcre2_ERROR_NOMATCH() -> Int = "moonbit_pcre2_ERROR_NOMATCH"
 
 ///|
@@ -149,20 +113,15 @@ extern "c" fn pcre2_ANCHORED() -> UInt = "moonbit_pcre2_ANCHORED"
 ///|
 pub type! Pcre2Error {
   LookaroundBSK
-  Null
-  BadMagic
-  BadOption
-  BadMode
-  Unset
   Unicode(UnicodeError)
   Error(String)
 } derive(Show)
 
 ///|
-type Ater[T] () -> T?!Pcre2Error
+type Ator[T] () -> T?!Pcre2Error
 
 ///|
-pub fn Ater::next[T](self : Ater[T]) -> T?!Pcre2Error {
+pub fn Ator::next[T](self : Ator[T]) -> T?!Pcre2Error {
   (self._)!()
 }
 
@@ -228,186 +187,10 @@ fn code_unit_to_character(
 }
 
 ///|
-pub fn Code::match_bytes(self : Code, subject : Bytes) -> Ater[Match[Bytes]] {
+pub fn Code::matches(self : Code, subject : String) -> Ator[Match[String]] {
   // The following code has been adapted from the pcre2demo.c file in the PCRE2
   // library.
-  let match_data = pcre2_match_data_create_from_pattern_8(
-    self._,
-    @c.none(),
-  )
-  let subject_length = subject.length().to_uint64()
-  let crlf_is_newline = match pcre2_pattern_info_newline(self._) {
-    Any | CRLF | AnyCRLF => true
-    _ => false
-  }
-  let mut ovector = @c.null()
-  let name_count = pcre2_pattern_info_name_count(self._)
-  let name_table = pcre2_pattern_info_name_table_8(self._)
-  let name_entry_size = pcre2_pattern_info_name_entry_size(self._).reinterpret_as_int()
-  fn pcre2_error(rc) -> Unit!Pcre2Error {
-    let string = Bytes::make(256, b'\x00')
-    let length = string.length().to_uint64()
-    let length = pcre2_get_error_message_8(rc, string, length)
-    pcre2_match_data_free_8(match_data)
-    let message : Bytes = [..string[:length]]
-    let message = @encoding.decoder(UTF8).decode_lossy(message)
-    raise Pcre2Error::Error(message)
-  }
-
-  fn() {
-    while true {
-      let rc = if ovector.is_null() {
-        let rc = pcre2_match_8(
-          self._,
-          subject,
-          subject_length,
-          0,
-          0,
-          match_data,
-          @c.none(),
-        )
-        if rc == pcre2_ERROR_NOMATCH() {
-          break
-        }
-        ovector = pcre2_get_ovector_pointer_8(match_data)
-        rc
-      } else {
-        let mut options = 0U // Normally no options
-        let mut start_offset = ovector[1] // Start at end of previous match
-
-        // If the previous match was for an empty string, we are finished if we are
-        // at the end of the subject. Otherwise, arrange to run another match at the
-        // same point to see if a non-empty match can be found.
-
-        if ovector[0] == ovector[1] {
-          if ovector[0] == subject.length().to_uint64() {
-            break
-          }
-          options = pcre2_NOTEMPTY_ATSTART() | pcre2_ANCHORED()
-        } else {
-          // If the previous match was not an empty string, there is one tricky case to
-          // consider. If a pattern contains \K within a lookbehind assertion at the
-          // start, the end of the matched string can be at the offset where the match
-          // started. Without special action, this leads to a loop that keeps on matching
-          // the same substring. We must detect this case and arrange to move the start on
-          // by one character. The pcre2_get_startchar() function returns the starting
-          // offset that was passed to pcre2_match().
-          let startchar = pcre2_get_startchar_8(match_data)
-          if start_offset <= startchar {
-            if startchar >= subject.length().to_uint64() {
-              break
-            }
-            start_offset = startchar + 1
-          }
-        }
-        let rc = pcre2_match_8(
-          self._,
-          subject,
-          subject_length,
-          start_offset,
-          options,
-          match_data,
-          @c.Nullable::none(),
-        )
-
-        // This time, a result of NOMATCH isn't an error. If the value in "options"
-        // is zero, it just means we have found all possible matches, so the loop ends.
-        // Otherwise, it means we have failed to find a non-empty-string match at a
-        // point where there was a previous empty-string match. In this case, we do
-        // what Perl does: advance the matching position by one character, and
-        // continue. We do this by setting the "end of previous match" offset, because
-        // that is picked up at the top of the loop as the point at which to start
-        // again.
-
-        // There are two complications: (a) When CRLF is a valid newline sequence, and
-        // the current position is just before it, advance by an extra byte. (b)
-        // Otherwise we must ensure that we skip an entire UTF character if we are in
-        // UTF mode.
-
-        if rc == pcre2_ERROR_NOMATCH() {
-          if options == 0U {
-            break // All matches found
-          }
-          ovector[1] = start_offset + 1 // Advance one code unit
-          if crlf_is_newline && // If CRLF is a newline & we are at CRLF
-            start_offset < subject_length - 1 &&
-            subject[start_offset.to_int()] == b'\r' &&
-            subject[start_offset.to_int() + 1] == b'\n' {
-            ovector[1] += 1 // Advance by one more code unit
-          }
-          // NOTE(translator): The original code test if the UTF8 flag is set. However,
-          // we are using UTF16, so we can skip the check.
-          continue // Go round the loop again
-        }
-        rc
-      }
-
-      // Other matching errors are not recoverable.
-
-      if rc < 0 {
-        pcre2_error!(rc)
-      }
-
-      // The match succeeded, but the output vector wasn't big enough. This
-      // should not happen.
-      if rc == 0 {
-        abort("Ovector was not big enough")
-      }
-
-      // We must guard against patterns such as /(?=.\K)/ that use \K in an
-      // assertion to set the start of a match later than its end. In this
-      // demonstration program, we just detect this case and give up.
-
-      if ovector[0] > ovector[1] {
-        pcre2_match_data_free_8(match_data)
-        raise LookaroundBSK
-      }
-
-      // As before, show substrings stored in the output vector by number, and
-      // then also any named substrings.
-      // NOTE(translator): The pcre2demo.c prints the matches to the console. We
-      // return the match here instead.
-      let match_ = Match::{
-        subject,
-        code_unit_offsets: FixedArray::make(2 * rc, 0),
-        character_offsets: FixedArray::make(2 * rc, 0),
-        captures: [],
-      }
-      for i in 0..<rc {
-        match_.code_unit_offsets[2 * i] = ovector[2 * i].to_int()
-        match_.code_unit_offsets[2 * i + 1] = ovector[2 * i + 1].to_int()
-      }
-
-      // Now we can scan the table and, for each entry, print the number, the
-      // name, and the substring itself. In the 8-bit library the number is held in
-      // two bytes, most significant first.
-
-      for i in 0U..<name_count {
-        // PCRE2_INFO_NAMETABLE returns a pointer to the first entry of the
-        // table. This is a PCRE2_SPTR pointer to a block of code units. In the
-        // 8-bit library, the first two bytes of each entry are the number of the
-        // capturing parenthesis, most significant byte first. In the 16-bit
-        // library, the pointer points to 16-bit code units, the first of which
-        // contains the parenthesis number. In the 32-bit library, the pointer
-        // points to 32-bit code units, the first of which contains the
-        // parenthesis number. The rest of the entry is the corresponding name,
-        // zero terminated.
-        let n = (name_table[0] << 8) | name_table[1]
-        let name = Bytes::makei(name_entry_size - 3, fn(i) { name_table[i + 2] })
-        match_.captures.push(Capture::{ match_, name, index: n.to_int() })
-      }
-      return Some(match_)
-    }
-    pcre2_match_data_free_8(match_data)
-    None
-  }
-}
-
-///|
-pub fn Code::match_string(self : Code, subject : String) -> Ater[Match[String]] {
-  // The following code has been adapted from the pcre2demo.c file in the PCRE2
-  // library.
-  let match_data = pcre2_match_data_create_from_pattern_16(
+  let match_data = pcre2_match_data_create_from_pattern(
     self._,
     @c.Nullable::none(),
   )
@@ -420,13 +203,13 @@ pub fn Code::match_string(self : Code, subject : String) -> Ater[Match[String]] 
   let mut start_code_unit_offset = 0
   let mut start_character_offset = 0
   let name_count = pcre2_pattern_info_name_count(self._)
-  let name_table = pcre2_pattern_info_name_table_16(self._)
+  let name_table = pcre2_pattern_info_name_table(self._)
   let name_entry_size = pcre2_pattern_info_name_entry_size(self._).reinterpret_as_int()
   fn pcre2_error(rc) -> Unit!Pcre2Error {
     let string = String::make(256, '\x00')
     let length = string.length().to_uint64()
-    let length = pcre2_get_error_message_16(rc, string, length)
-    pcre2_match_data_free_16(match_data)
+    let length = pcre2_get_error_message(rc, string, length)
+    pcre2_match_data_free(match_data)
     raise Pcre2Error::Error([..string[:length]])
   }
 
@@ -454,7 +237,7 @@ pub fn Code::match_string(self : Code, subject : String) -> Ater[Match[String]] 
   fn() {
     while true {
       let rc = if ovector.is_null() {
-        let rc = pcre2_match_16(
+        let rc = pcre2_match(
           self._,
           subject,
           subject_length,
@@ -466,7 +249,7 @@ pub fn Code::match_string(self : Code, subject : String) -> Ater[Match[String]] 
         if rc == pcre2_ERROR_NOMATCH() {
           break
         }
-        ovector = pcre2_get_ovector_pointer_16(match_data)
+        ovector = pcre2_get_ovector_pointer(match_data)
         rc
       } else {
         let mut options = 0U // Normally no options
@@ -490,7 +273,7 @@ pub fn Code::match_string(self : Code, subject : String) -> Ater[Match[String]] 
           // the same substring. We must detect this case and arrange to move the start on
           // by one character. The pcre2_get_startchar() function returns the starting
           // offset that was passed to pcre2_match().
-          let startchar = pcre2_get_startchar_8(match_data)
+          let startchar = pcre2_get_startchar(match_data)
           if start_offset <= startchar {
             if startchar >= subject.length().to_uint64() {
               break
@@ -498,7 +281,7 @@ pub fn Code::match_string(self : Code, subject : String) -> Ater[Match[String]] 
             start_offset = startchar + 1
           }
         }
-        let rc = pcre2_match_16(
+        let rc = pcre2_match(
           self._,
           subject,
           subject_length,
@@ -557,7 +340,7 @@ pub fn Code::match_string(self : Code, subject : String) -> Ater[Match[String]] 
       // demonstration program, we just detect this case and give up.
 
       if ovector[0] > ovector[1] {
-        pcre2_match_data_free_16(match_data)
+        pcre2_match_data_free(match_data)
         raise LookaroundBSK
       }
 
@@ -611,13 +394,10 @@ pub fn Code::match_string(self : Code, subject : String) -> Ater[Match[String]] 
       }
       return Some(match_)
     }
-    pcre2_match_data_free_16(match_data)
+    pcre2_match_data_free(match_data)
     None
   }
 }
-
-///|
-typealias Pcre2Size = UInt64
 
 ///|
 extern "c" fn pcre2_SUBSTITUTE_OVERFLOW_LENGTH() -> UInt = "moonbit_pcre2_SUBSTITUTE_OVERFLOW_LENGTH"
@@ -631,57 +411,18 @@ pub fn substitute(
   subject : String,
   replacement : String
 ) -> String {
-  let match_data = pcre2_match_data_create_from_pattern_16(
+  let match_data = pcre2_match_data_create_from_pattern(
     self._,
     @c.Nullable::none(),
   )
   let subject_length = subject.length().to_uint64()
   let replacement_length = replacement.length().to_uint64()
-  let crlf_is_newline = match pcre2_pattern_info_newline(self._) {
-    Any | CRLF | AnyCRLF => true
-    _ => false
-  }
-  let mut ovector = @c.null()
-  let mut start_code_unit_offset = 0
-  let mut start_character_offset = 0
-  let name_count = pcre2_pattern_info_name_count(self._)
-  let name_table = pcre2_pattern_info_name_table_16(self._)
-  let name_entry_size = pcre2_pattern_info_name_entry_size(self._).reinterpret_as_int()
-  fn pcre2_error(rc) -> Unit!Pcre2Error {
-    let string = String::make(256, '\x00')
-    let length = string.length().to_uint64()
-    let length = pcre2_get_error_message_16(rc, string, length)
-    pcre2_match_data_free_16(match_data)
-    raise Pcre2Error::Error([..string[:length]])
-  }
-
-  fn update_offsets(offset : Int) -> Unit!Pcre2Error {
-    while start_code_unit_offset < offset {
-      let c1 = subject[start_code_unit_offset]
-      if is_leading_surrogate(c1) {
-        if start_code_unit_offset + 1 == offset {
-          raise Pcre2Error::Unicode(InvalidCodeUnitOffset(offset))
-        }
-        let c2 = subject[start_code_unit_offset + 1]
-        if is_trailing_surrogate(c2) {
-          start_code_unit_offset += 2
-          start_character_offset += 1
-        } else {
-          raise Pcre2Error::Unicode(InvalidSurrogatePair)
-        }
-      } else {
-        start_code_unit_offset += 1
-        start_character_offset += 1
-      }
-    }
-  }
-
   let output_length : FixedArray[UInt64] = [subject.length().to_uint64() * 2]
   while true {
     let output = String::make(output_length[0].to_int(), '\x00')
     let options = pcre2_SUBSTITUTE_OVERFLOW_LENGTH()
     let start_offset = 0
-    let rc = pcre2_substitute_16(
+    let rc = pcre2_substitute(
       self._,
       subject,
       subject_length,
@@ -703,23 +444,4 @@ pub fn substitute(
   } else {
     abort("unreachable")
   }
-}
-
-///|
-priv enum Pcre2BSR {
-  Unicode
-  AnyCRLF
-}
-
-///|
-priv enum Pcre2InfoFirstCodeType {
-  NothingSet
-  FirstCodeUnitIsSet
-  StartOfStringOrAfterNewline
-}
-
-///|
-priv enum Pcre2InfoLastCodeType {
-  NothingSet
-  CodeUnitIsSet
 }
