@@ -65,7 +65,7 @@ def generate(template: Path):
 
     for code_unit_width in ["8", "16"]:
         artifact[code_unit_width] = "\n\n".join(artifact[code_unit_width])
-        path = Path("src") / f"pcre2-{code_unit_width}" / "pcre2.mbt"
+        path = Path("src") / f"pcre2_{code_unit_width}" / "pcre2.mbt"
         path.write_text(artifact[code_unit_width])
 
 

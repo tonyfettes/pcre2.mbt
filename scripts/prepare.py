@@ -94,8 +94,8 @@ def prepare(source: Path, target: Path, code_unit_width: int = 8 | 16 | 32):
 
 
 def main():
-    prepare(Path("src/pcre2/src"), Path("src/pcre2-8"), code_unit_width=8)
-    prepare(Path("src/pcre2/src"), Path("src/pcre2-16"), code_unit_width=16)
+    prepare(Path("src/pcre2/src"), Path("src/pcre2_8"), code_unit_width=8)
+    prepare(Path("src/pcre2/src"), Path("src/pcre2_16"), code_unit_width=16)
 
 
 if __name__ == "__main__":
