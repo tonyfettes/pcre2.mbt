@@ -102,15 +102,6 @@ pub fn Match::captures(self : Match) -> Iter2[String, Capture] {
 }
 
 ///|
-extern "c" fn pcre2_ERROR_NOMATCH() -> Int = "moonbit_pcre2_ERROR_NOMATCH"
-
-///|
-extern "c" fn pcre2_NOTEMPTY_ATSTART() -> UInt = "moonbit_pcre2_NOTEMPTY_ATSTART"
-
-///|
-extern "c" fn pcre2_ANCHORED() -> UInt = "moonbit_pcre2_ANCHORED"
-
-///|
 pub type! Pcre2Error {
   LookaroundBSK
   Unicode(UnicodeError)
@@ -398,12 +389,6 @@ pub fn Code::matches(self : Code, subject : String) -> Ator[Match] {
     None
   }
 }
-
-///|
-extern "c" fn pcre2_SUBSTITUTE_OVERFLOW_LENGTH() -> UInt = "moonbit_pcre2_SUBSTITUTE_OVERFLOW_LENGTH"
-
-///|
-extern "c" fn pcre2_ERROR_NOMEMORY() -> Int = "moonbit_pcre2_ERROR_NOMEMORY"
 
 ///|
 pub fn substitute(

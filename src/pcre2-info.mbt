@@ -1,16 +1,4 @@
 ///|
-extern "c" fn pcre2_INFO_NAMECOUNT() -> UInt = "moonbit_pcre2_INFO_NAMECOUNT"
-
-///|
-extern "c" fn pcre2_INFO_NAMEENTRYSIZE() -> UInt = "moonbit_pcre2_INFO_NAMEENTRYSIZE"
-
-///|
-extern "c" fn pcre2_INFO_NAMETABLE() -> UInt = "moonbit_pcre2_INFO_NAMETABLE"
-
-///|
-extern "c" fn pcre2_INFO_NEWLINE() -> UInt = "moonbit_pcre2_INFO_NEWLINE"
-
-///|
 pub enum Pcre2Newline {
   CR
   LF
@@ -36,21 +24,6 @@ fn Pcre2Newline::of_uint(value : UInt) -> Pcre2Newline {
     Pcre2Newline::Nul
   }
 }
-
-///|
-extern "c" fn pcre2_NEWLINE_CR() -> UInt = "moonbit_pcre2_NEWLINE_CR"
-
-///|
-extern "c" fn pcre2_NEWLINE_CRLF() -> UInt = "moonbit_pcre2_NEWLINE_CRLF"
-
-///|
-extern "c" fn pcre2_NEWLINE_LF() -> UInt = "moonbit_pcre2_NEWLINE_LF"
-
-///|
-extern "c" fn pcre2_NEWLINE_ANY() -> UInt = "moonbit_pcre2_NEWLINE_ANY"
-
-///|
-extern "c" fn pcre2_NEWLINE_ANYCRLF() -> UInt = "moonbit_pcre2_NEWLINE_ANYCRLF"
 
 ///|
 fn pcre2_pattern_info_newline(code : Pcre2Code) -> Pcre2Newline {

@@ -1,33 +1,33 @@
 ///|
-extern type Pcre2Code
+priv extern type Pcre2Code
 
 ///|
-extern type Pcre2CompileContext
+priv extern type Pcre2CompileContext
 
 ///|
-extern type Pcre2GeneralContext
+priv extern type Pcre2GeneralContext
 
 ///|
-extern type Pcre2MatchData
+priv extern type Pcre2MatchData
 
 ///|
-extern type Pcre2MatchContext
+priv extern type Pcre2MatchContext
 
 ///|
 typealias Pcre2Size = UInt64
 
 ///|
-pub extern "c" fn pcre2_get_error_message(
+extern "c" fn pcre2_get_error_message(
   error_code : Int,
   buffer : String,
   buffer_length : Pcre2Size
 ) -> Int = "pcre2_get_error_message_16"
 
 ///|
-pub extern "c" fn pcre2_code_free(code : Pcre2Code) = "pcre2_code_free_16"
+extern "c" fn pcre2_code_free(code : Pcre2Code) = "pcre2_code_free_16"
 
 ///|
-pub extern "c" fn pcre2_compile(
+extern "c" fn pcre2_compile(
   pattern : String,
   length : Int,
   options : UInt,
@@ -37,21 +37,21 @@ pub extern "c" fn pcre2_compile(
 ) -> Pcre2Code = "pcre2_compile_16"
 
 ///|
-pub extern "c" fn pcre2_match_data_create_from_pattern(
+extern "c" fn pcre2_match_data_create_from_pattern(
   code : Pcre2Code,
   context : @c.Nullable[Pcre2GeneralContext]
 ) -> Pcre2MatchData = "pcre2_match_data_create_from_pattern_16"
 
 ///|
-pub extern "c" fn pcre2_match_data_free(match_data : Pcre2MatchData) = "pcre2_match_data_free_16"
+extern "c" fn pcre2_match_data_free(match_data : Pcre2MatchData) = "pcre2_match_data_free_16"
 
 ///|
-pub extern "c" fn pcre2_get_ovector_pointer(
+extern "c" fn pcre2_get_ovector_pointer(
   match_data : Pcre2MatchData
 ) -> @c.Pointer[Pcre2Size] = "pcre2_get_ovector_pointer_16"
 
 ///|
-pub extern "c" fn pcre2_substitute(
+extern "c" fn pcre2_substitute(
   code : Pcre2Code,
   subject : String,
   length : Pcre2Size,
@@ -66,10 +66,10 @@ pub extern "c" fn pcre2_substitute(
 ) -> Int = "pcre2_substitute_16"
 
 ///|
-pub extern "c" fn pcre2_get_startchar(match_data : Pcre2MatchData) -> Pcre2Size = "pcre2_get_startchar_16"
+extern "c" fn pcre2_get_startchar(match_data : Pcre2MatchData) -> Pcre2Size = "pcre2_get_startchar_16"
 
 ///|
-pub extern "c" fn pcre2_match(
+extern "c" fn pcre2_match(
   code : Pcre2Code,
   subject : String,
   length : Pcre2Size,
@@ -80,7 +80,7 @@ pub extern "c" fn pcre2_match(
 ) -> Int = "pcre2_match_16"
 
 ///|
-pub extern "c" fn pcre2_pattern_info(
+extern "c" fn pcre2_pattern_info(
   code : Pcre2Code,
   what : UInt,
   where_ : @c.Pointer[Unit]
