@@ -15,19 +15,13 @@ pub fn compile(pattern : String) -> Code!Pcre2Error {
   ).to()
   match code {
     Some(code) => code
-    None => {
+    None =>
       if error_code[0] > 0 {
         raise Pcre2Error::Compile(pattern, error_code[0], error_offset[0])
       } else {
         raise Pcre2Error::Code(error_code[0])
       }
-    }
   }
-}
-
-///|
-pub fn Code::free(self : Code) -> Unit {
-  pcre2_code_free(self._)
 }
 
 ///|
@@ -131,6 +125,7 @@ pub impl Show for Pcre2Error with output(self : Pcre2Error, logger : &Logger) ->
       logger.write_string([..message[:length]])
     }
   }
+
   match self {
     LookaroundBSK => logger.write_string("Lookaround BSK")
     Unicode(error) => logger.write_string("Unicode error: \{error}")
@@ -149,9 +144,7 @@ pub impl Show for Pcre2Error with output(self : Pcre2Error, logger : &Logger) ->
         logger.write_char(' ')
       }
     }
-    Code(code) => {
-      write_error_message(code, logger)
-    }
+    Code(code) => write_error_message(code, logger)
   }
 }
 
@@ -225,10 +218,7 @@ fn code_unit_to_character(
 pub fn Code::matches(self : Code, subject : String) -> Ator[Match]!Pcre2Error {
   // The following code has been adapted from the pcre2demo.c file in the PCRE2
   // library.
-  let match_data = pcre2_match_data_create_from_pattern(
-    self._,
-    @c.none(),
-  )
+  let match_data = pcre2_match_data_create_from_pattern(self._, @c.none())
   let subject_length = subject.length().to_uint64()
   let crlf_is_newline = match self.newline!() {
     Any | CRLF | AnyCRLF => true
@@ -240,9 +230,9 @@ pub fn Code::matches(self : Code, subject : String) -> Ator[Match]!Pcre2Error {
   let name_count = self.name_count!()
   let name_table = self.name_table!()
   let name_entry_size = self.name_entry_size!().reinterpret_as_int()
-  fn pcre2_error(rc) -> Unit!Pcre2Error {
+  fn pcre2_error(error : Pcre2Error) -> Unit!Pcre2Error {
     pcre2_match_data_free(match_data)
-    raise Pcre2Error::Code(rc)
+    raise error
   }
 
   fn update_offsets(offset : Int) -> Unit!Pcre2Error {
@@ -358,7 +348,7 @@ pub fn Code::matches(self : Code, subject : String) -> Ator[Match]!Pcre2Error {
       // Other matching errors are not recoverable.
 
       if rc < 0 {
-        pcre2_error!(rc)
+        pcre2_error!(Code(rc))
       }
 
       // The match succeeded, but the output vector wasn't big enough. This
@@ -373,7 +363,7 @@ pub fn Code::matches(self : Code, subject : String) -> Ator[Match]!Pcre2Error {
 
       if ovector[0] > ovector[1] {
         pcre2_match_data_free(match_data)
-        raise LookaroundBSK
+        pcre2_error!(LookaroundBSK)
       }
 
       // As before, show substrings stored in the output vector by number, and
@@ -399,7 +389,7 @@ pub fn Code::matches(self : Code, subject : String) -> Ator[Match]!Pcre2Error {
           start_character_offset~,
         )
       } catch {
-        error => raise Pcre2Error::Unicode(error)
+        error => pcre2_error!(Pcre2Error::Unicode(error))
       }
 
       // Now we can scan the table and, for each entry, print the number, the
@@ -437,10 +427,7 @@ pub fn substitute(
   subject : String,
   replacement : String
 ) -> String {
-  let match_data = pcre2_match_data_create_from_pattern(
-    self._,
-    @c.none(),
-  )
+  let match_data = pcre2_match_data_create_from_pattern(self._, @c.none())
   let subject_length = subject.length().to_uint64()
   let replacement_length = replacement.length().to_uint64()
   let output_length : FixedArray[UInt64] = [subject.length().to_uint64() * 2]

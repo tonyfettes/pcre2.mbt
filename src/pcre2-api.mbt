@@ -1,5 +1,5 @@
 ///|
-priv extern type Pcre2Code
+priv type Pcre2Code
 
 ///|
 priv extern type Pcre2CompileContext
@@ -24,9 +24,6 @@ extern "c" fn pcre2_get_error_message(
 ) -> Int = "moonbit_pcre2_get_error_message"
 
 ///|
-extern "c" fn pcre2_code_free(code : Pcre2Code) = "pcre2_code_free_16"
-
-///|
 extern "c" fn pcre2_compile(
   pattern : String,
   length : Pcre2Size,
@@ -40,7 +37,7 @@ extern "c" fn pcre2_compile(
 extern "c" fn pcre2_match_data_create_from_pattern(
   code : Pcre2Code,
   context : @c.Nullable[Pcre2GeneralContext]
-) -> Pcre2MatchData = "pcre2_match_data_create_from_pattern_16"
+) -> Pcre2MatchData = "moonbit_pcre2_match_data_create_from_pattern"
 
 ///|
 extern "c" fn pcre2_match_data_free(match_data : Pcre2MatchData) = "pcre2_match_data_free_16"

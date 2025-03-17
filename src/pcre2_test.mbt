@@ -12,11 +12,3 @@ test "captures" {
   code.free()
   @json.inspect!(views, content=["hell𐐷o", "hell𐐷o"])
 }
-
-///|
-test "error/compile" {
-  // match @pcre2.compile?("(?<hello>hello") {
-  //   Ok(_) => fail!("Ok")
-  //   Err(error) => inspect!(error)
-  // }
-}
