@@ -1,0 +1,58 @@
+package tonyfettes/pcre2
+
+alias @moonbitlang/core/string as @string
+
+// Values
+fn compile(String) -> Code
+
+fn substitute(Code, String, String) -> String
+
+// Types and methods
+type Ater[T]
+impl Ater {
+  next[T](Self[T]) -> T?!Pcre2Error
+}
+
+type Capture
+impl Capture {
+  name(Self) -> String
+  range(Self) -> (Int, Int)
+  view(Self) -> @string.StringView
+}
+
+type Code
+impl Code {
+  free(Self) -> Unit
+  matches(Self, String) -> Ater[Match]
+  substitute(Self, String, String) -> String
+}
+
+type Match
+impl Match {
+  captures(Self) -> Iter2[String, Capture]
+  offsets(Self) -> Iter[Int]
+  ranges(Self) -> Iter2[Int, Int]
+}
+
+pub type! Pcre2Error {
+  LookaroundBSK
+  Null
+  BadMagic
+  BadOption
+  BadMode
+  Unset
+  Unicode(UnicodeError)
+  Error(String)
+}
+impl Show for Pcre2Error
+
+pub type! UnicodeError {
+  InvalidCodeUnitOffset(Int)
+  InvalidSurrogatePair
+}
+impl Show for UnicodeError
+
+// Type aliases
+
+// Traits
+

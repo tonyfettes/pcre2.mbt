@@ -572,20 +572,20 @@ pub fn substitute(
 }
 
 ///|
-enum Pcre2BSR {
+priv enum Pcre2BSR {
   Unicode
   AnyCRLF
 }
 
 ///|
-enum Pcre2InfoFirstCodeType {
+priv enum Pcre2InfoFirstCodeType {
   NothingSet
   FirstCodeUnitIsSet
   StartOfStringOrAfterNewline
 }
 
 ///|
-enum Pcre2InfoLastCodeType {
+priv enum Pcre2InfoLastCodeType {
   NothingSet
   CodeUnitIsSet
 }

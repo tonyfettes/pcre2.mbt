@@ -84,7 +84,7 @@ extern "c" fn pcre2_pattern_info(
 ) -> Int = "pcre2_pattern_info_16"
 
 ///|
-pub enum Pcre2Newline {
+priv enum Pcre2Newline {
   CR
   LF
   CRLF
