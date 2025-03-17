@@ -240,14 +240,14 @@ pub fn Code::matches(self : Code, subject : String) -> Ator[Match]!Pcre2Error {
       let c1 = subject[start_code_unit_offset]
       if is_leading_surrogate(c1) {
         if start_code_unit_offset + 1 == offset {
-          raise Pcre2Error::Unicode(InvalidCodeUnitOffset(offset))
+          pcre2_error!(Pcre2Error::Unicode(InvalidCodeUnitOffset(offset)))
         }
         let c2 = subject[start_code_unit_offset + 1]
         if is_trailing_surrogate(c2) {
           start_code_unit_offset += 2
           start_character_offset += 1
         } else {
-          raise Pcre2Error::Unicode(InvalidSurrogatePair)
+          pcre2_error!(Pcre2Error::Unicode(InvalidSurrogatePair))
         }
       } else {
         start_code_unit_offset += 1
@@ -362,7 +362,6 @@ pub fn Code::matches(self : Code, subject : String) -> Ator[Match]!Pcre2Error {
       // demonstration program, we just detect this case and give up.
 
       if ovector[0] > ovector[1] {
-        pcre2_match_data_free(match_data)
         pcre2_error!(LookaroundBSK)
       }
 
