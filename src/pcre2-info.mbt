@@ -26,45 +26,53 @@ fn Pcre2Newline::of_uint(value : UInt) -> Pcre2Newline {
 }
 
 ///|
-fn pcre2_pattern_info_newline(code : Pcre2Code) -> Pcre2Newline {
+fn Code::newline(self : Code) -> Pcre2Newline!Pcre2Error {
   let newline = FixedArray::make(1, 0U)
-  let _ = pcre2_pattern_info(
-    code,
-    pcre2_INFO_NEWLINE(),
-    @c.Pointer::of_array(newline).cast(),
-  )
+  let result = pcre2_pattern_info_uint(self._, pcre2_INFO_NEWLINE(), newline)
+  if result != 0 {
+    raise Pcre2Error::Code(result)
+  }
   Pcre2Newline::of_uint(newline[0])
 }
 
 ///|
-fn pcre2_pattern_info_name_count(code : Pcre2Code) -> UInt {
+fn Code::name_count(self : Code) -> UInt!Pcre2Error {
   let name_count = FixedArray::make(1, 0U)
-  let _ = pcre2_pattern_info(
-    code,
+  let result = pcre2_pattern_info_uint(
+    self._,
     pcre2_INFO_NAMECOUNT(),
-    @c.Pointer::of_array(name_count).cast(),
+    name_count,
   )
+  if result != 0 {
+    raise Pcre2Error::Code(result)
+  }
   name_count[0]
 }
 
 ///|
-fn pcre2_pattern_info_name_table(code : Pcre2Code) -> @c.Pointer[UInt16] {
+fn Code::name_table(self : Code) -> @c.Pointer[UInt16]!Pcre2Error {
   let name_table = FixedArray::make(1, @c.null())
-  let _ = pcre2_pattern_info(
-    code,
+  let result = pcre2_pattern_info_uint16_pointer(
+    self._,
     pcre2_INFO_NAMETABLE(),
-    @c.Pointer::of_array(name_table).cast(),
+    name_table,
   )
+  if result != 0 {
+    raise Pcre2Error::Code(result)
+  }
   name_table[0]
 }
 
 ///|
-fn pcre2_pattern_info_name_entry_size(code : Pcre2Code) -> UInt {
+fn Code::name_entry_size(self : Code) -> UInt!Pcre2Error {
   let name_entry_size = FixedArray::make(1, 0U)
-  let _ = pcre2_pattern_info(
-    code,
+  let result = pcre2_pattern_info_uint(
+    self._,
     pcre2_INFO_NAMEENTRYSIZE(),
-    @c.Pointer::of_array(name_entry_size).cast(),
+    name_entry_size,
   )
+  if result != 0 {
+    raise Pcre2Error::Code(result)
+  }
   name_entry_size[0]
 }

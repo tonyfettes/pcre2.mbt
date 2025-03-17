@@ -8,8 +8,8 @@ fn compile(String) -> Code
 fn substitute(Code, String, String) -> String
 
 // Types and methods
-type Ater[T]
-impl Ater {
+type Ator[T]
+impl Ator {
   next[T](Self[T]) -> T?!Pcre2Error
 }
 
@@ -23,7 +23,7 @@ impl Capture {
 type Code
 impl Code {
   free(Self) -> Unit
-  matches(Self, String) -> Ater[Match]
+  matches(Self, String) -> Ator[Match]
   substitute(Self, String, String) -> String
 }
 
@@ -36,15 +36,19 @@ impl Match {
 
 pub type! Pcre2Error {
   LookaroundBSK
-  Null
-  BadMagic
-  BadOption
-  BadMode
-  Unset
   Unicode(UnicodeError)
   Error(String)
 }
 impl Show for Pcre2Error
+
+pub enum Pcre2Newline {
+  CR
+  LF
+  CRLF
+  Any
+  AnyCRLF
+  Nul
+}
 
 pub type! UnicodeError {
   InvalidCodeUnitOffset(Int)

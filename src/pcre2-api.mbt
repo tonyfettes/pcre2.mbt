@@ -21,7 +21,7 @@ extern "c" fn pcre2_get_error_message(
   error_code : Int,
   buffer : String,
   buffer_length : Pcre2Size
-) -> Int = "pcre2_get_error_message_16"
+) -> Int = "moonbit_pcre2_get_error_message"
 
 ///|
 extern "c" fn pcre2_code_free(code : Pcre2Code) = "pcre2_code_free_16"
@@ -29,12 +29,12 @@ extern "c" fn pcre2_code_free(code : Pcre2Code) = "pcre2_code_free_16"
 ///|
 extern "c" fn pcre2_compile(
   pattern : String,
-  length : Int,
+  length : Pcre2Size,
   options : UInt,
   error_code : FixedArray[Int],
   error_offset : FixedArray[Pcre2Size],
   context : @c.Nullable[Pcre2CompileContext]
-) -> Pcre2Code = "pcre2_compile_16"
+) -> @c.Nullable[Pcre2Code] = "moonbit_pcre2_compile"
 
 ///|
 extern "c" fn pcre2_match_data_create_from_pattern(
@@ -55,7 +55,7 @@ extern "c" fn pcre2_substitute(
   code : Pcre2Code,
   subject : String,
   length : Pcre2Size,
-  start_offset : Int,
+  start_offset : Pcre2Size,
   options : UInt,
   match_data : Pcre2MatchData,
   match_context : @c.Nullable[Pcre2MatchContext],
@@ -77,11 +77,18 @@ extern "c" fn pcre2_match(
   options : UInt,
   match_data : Pcre2MatchData,
   context : @c.Nullable[Pcre2MatchContext]
-) -> Int = "pcre2_match_16"
+) -> Int = "moonbit_pcre2_match"
 
 ///|
-extern "c" fn pcre2_pattern_info(
+extern "c" fn pcre2_pattern_info_uint(
   code : Pcre2Code,
   what : UInt,
-  where_ : @c.Pointer[Unit]
-) -> Int = "pcre2_pattern_info_16"
+  where_ : FixedArray[UInt]
+) -> Int = "moonbit_pcre2_pattern_info_uint32"
+
+///|
+extern "c" fn pcre2_pattern_info_uint16_pointer(
+  code : Pcre2Code,
+  what : UInt,
+  where_ : FixedArray[@c.Pointer[UInt16]]
+) -> Int = "moonbit_pcre2_pattern_info_uint16_pointer"

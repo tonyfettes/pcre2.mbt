@@ -193,3 +193,62 @@ uint32_t
 moonbit_pcre2_SUBSTITUTE_OVERFLOW_LENGTH() {
   return PCRE2_SUBSTITUTE_OVERFLOW_LENGTH;
 }
+
+int32_t
+moonbit_pcre2_get_error_message(
+  int32_t error_code,
+  moonbit_string_t buffer,
+  PCRE2_SIZE buffer_length
+) {
+  int32_t written = pcre2_get_error_message(error_code, buffer, buffer_length);
+  moonbit_decref(buffer);
+  return written;
+}
+
+pcre2_code *
+moonbit_pcre2_compile(
+  moonbit_string_t pattern,
+  PCRE2_SIZE length,
+  uint32_t options,
+  int32_t *error_code,
+  PCRE2_SIZE *error_offset,
+  pcre2_compile_context *context
+) {
+  pcre2_code *code =
+    pcre2_compile(pattern, length, options, error_code, error_offset, context);
+  moonbit_decref(pattern);
+  moonbit_decref(error_code);
+  moonbit_decref(error_offset);
+  return code;
+}
+
+int32_t
+moonbit_pcre2_match(
+  pcre2_code *code,
+  moonbit_string_t subject,
+  PCRE2_SIZE length,
+  PCRE2_SIZE start_offset,
+  uint32_t options,
+  pcre2_match_data *match_data,
+  pcre2_match_context *match_context
+) {
+  int32_t captures = pcre2_match(
+    code, subject, length, start_offset, options, match_data, match_context
+  );
+  moonbit_decref(subject);
+  return captures;
+}
+
+int32_t
+moonbit_pcre2_pattern_info_uint32(pcre2_code *code, uint32_t what, uint32_t *where) {
+  int32_t result = pcre2_pattern_info(code, PCRE2_INFO_NEWLINE, where);
+  moonbit_decref(where);
+  return result;
+}
+
+int32_t
+moonbit_pcre2_pattern_info_uint16_pointer(pcre2_code *code, uint32_t what, uint16_t **where) {
+  int32_t result = pcre2_pattern_info(code, PCRE2_INFO_NAMETABLE, where);
+  moonbit_decref(where);
+  return result;
+}

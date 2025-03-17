@@ -2,17 +2,27 @@
 type Code Pcre2Code
 
 ///|
-pub fn compile(pattern : String) -> Code {
+pub fn compile(pattern : String) -> Code!Pcre2Error {
   let error_code = FixedArray::make(1, 0)
   let error_offset = FixedArray::make(1, (0 : Pcre2Size))
-  pcre2_compile(
+  let code = pcre2_compile(
     pattern,
-    pattern.length(),
+    pattern.length().to_uint64(),
     0,
     error_code,
     error_offset,
     @c.Nullable::of(None),
-  )
+  ).to()
+  match code {
+    Some(code) => code
+    None => {
+      if error_code[0] > 0 {
+        raise Pcre2Error::Compile(pattern, error_code[0], error_offset[0])
+      } else {
+        raise Pcre2Error::Code(error_code[0])
+      }
+    }
+  }
 }
 
 ///|
@@ -105,8 +115,45 @@ pub fn Match::captures(self : Match) -> Iter2[String, Capture] {
 pub type! Pcre2Error {
   LookaroundBSK
   Unicode(UnicodeError)
-  Error(String)
-} derive(Show)
+  Compile(String, Int, Pcre2Size)
+  Code(Int)
+}
+
+///|
+pub impl Show for Pcre2Error with output(self : Pcre2Error, logger : &Logger) -> Unit {
+  fn write_error_message(code : Int, logger : &Logger) -> Unit {
+    let message = String::make(256, '\x00')
+    let length = message.length().to_uint64()
+    let length = pcre2_get_error_message(code, message, length)
+    if length < 0 {
+      logger.write_string("Unknown error")
+    } else {
+      logger.write_string([..message[:length]])
+    }
+  }
+  match self {
+    LookaroundBSK => logger.write_string("Lookaround BSK")
+    Unicode(error) => logger.write_string("Unicode error: \{error}")
+    Compile(pattern, code, offset) => {
+      logger.write_string("Compilation error @ \{offset}: ")
+      write_error_message(code, logger)
+      logger.write_char('\n')
+      let start = @math.maximum(0, offset.to_int() - 10)
+      let end = @math.minimum(pattern.length(), offset.to_int() + 10)
+      logger.write_substring(pattern, start, end)
+      for _ in 0..<start {
+        logger.write_char(' ')
+      }
+      logger.write_char('^')
+      for _ in (start + 1)..<end {
+        logger.write_char(' ')
+      }
+    }
+    Code(code) => {
+      write_error_message(code, logger)
+    }
+  }
+}
 
 ///|
 type Ator[T] () -> T?!Pcre2Error
@@ -115,9 +162,6 @@ type Ator[T] () -> T?!Pcre2Error
 pub fn Ator::next[T](self : Ator[T]) -> T?!Pcre2Error {
   (self._)!()
 }
-
-///|
-// fn string_to_array(string : String) -> FixedArray[UInt16] = "%identity"
 
 ///|
 fn array_to_string(array : FixedArray[UInt16]) -> String = "%identity"
@@ -178,30 +222,27 @@ fn code_unit_to_character(
 }
 
 ///|
-pub fn Code::matches(self : Code, subject : String) -> Ator[Match] {
+pub fn Code::matches(self : Code, subject : String) -> Ator[Match]!Pcre2Error {
   // The following code has been adapted from the pcre2demo.c file in the PCRE2
   // library.
   let match_data = pcre2_match_data_create_from_pattern(
     self._,
-    @c.Nullable::none(),
+    @c.none(),
   )
   let subject_length = subject.length().to_uint64()
-  let crlf_is_newline = match pcre2_pattern_info_newline(self._) {
+  let crlf_is_newline = match self.newline!() {
     Any | CRLF | AnyCRLF => true
     _ => false
   }
   let mut ovector = @c.null()
   let mut start_code_unit_offset = 0
   let mut start_character_offset = 0
-  let name_count = pcre2_pattern_info_name_count(self._)
-  let name_table = pcre2_pattern_info_name_table(self._)
-  let name_entry_size = pcre2_pattern_info_name_entry_size(self._).reinterpret_as_int()
+  let name_count = self.name_count!()
+  let name_table = self.name_table!()
+  let name_entry_size = self.name_entry_size!().reinterpret_as_int()
   fn pcre2_error(rc) -> Unit!Pcre2Error {
-    let string = String::make(256, '\x00')
-    let length = string.length().to_uint64()
-    let length = pcre2_get_error_message(rc, string, length)
     pcre2_match_data_free(match_data)
-    raise Pcre2Error::Error([..string[:length]])
+    raise Pcre2Error::Code(rc)
   }
 
   fn update_offsets(offset : Int) -> Unit!Pcre2Error {
@@ -235,7 +276,7 @@ pub fn Code::matches(self : Code, subject : String) -> Ator[Match] {
           0,
           0,
           match_data,
-          @c.Nullable::none(),
+          @c.none(),
         )
         if rc == pcre2_ERROR_NOMATCH() {
           break
@@ -279,7 +320,7 @@ pub fn Code::matches(self : Code, subject : String) -> Ator[Match] {
           start_offset,
           options,
           match_data,
-          @c.Nullable::none(),
+          @c.none(),
         )
 
         // This time, a result of NOMATCH isn't an error. If the value in "options"
@@ -398,7 +439,7 @@ pub fn substitute(
 ) -> String {
   let match_data = pcre2_match_data_create_from_pattern(
     self._,
-    @c.Nullable::none(),
+    @c.none(),
   )
   let subject_length = subject.length().to_uint64()
   let replacement_length = replacement.length().to_uint64()
@@ -406,7 +447,7 @@ pub fn substitute(
   while true {
     let output = String::make(output_length[0].to_int(), '\x00')
     let options = pcre2_SUBSTITUTE_OVERFLOW_LENGTH()
-    let start_offset = 0
+    let start_offset = 0UL
     let rc = pcre2_substitute(
       self._,
       subject,
