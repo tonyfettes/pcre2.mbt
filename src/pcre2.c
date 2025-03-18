@@ -276,7 +276,7 @@ moonbit_pcre2_pattern_info_uint32(
   uint32_t what,
   uint32_t *where
 ) {
-  int32_t result = pcre2_pattern_info(code->code, PCRE2_INFO_NEWLINE, where);
+  int32_t result = pcre2_pattern_info(code->code, what, where);
   moonbit_decref(code);
   moonbit_decref(where);
   return result;
@@ -288,7 +288,7 @@ moonbit_pcre2_pattern_info_uint16_pointer(
   uint32_t what,
   uint16_t **where
 ) {
-  int32_t result = pcre2_pattern_info(code->code, PCRE2_INFO_NAMETABLE, where);
+  int32_t result = pcre2_pattern_info(code->code, what, where);
   moonbit_decref(code);
   moonbit_decref(where);
   return result;
