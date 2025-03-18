@@ -5,7 +5,7 @@ set(c.mbt_DIR ${CMAKE_SOURCE_DIR}/../c.mbt/install/lib/cmake/c.mbt)
 find_package(c.mbt REQUIRED)
 
 set(PCRE2_BUILD_PCRE2_16 ON)
-add_subdirectory(src/pcre2)
+add_subdirectory(src/pcre2 EXCLUDE_FROM_ALL)
 
 # We need to include pcre2-16-static in the export set
 
@@ -25,12 +25,11 @@ option(PCRE2_MBT_BUILD_TESTS "Build tests" OFF)
 
 add_library(pcre2.mbt::moonbit ALIAS moonbit)
 
-add_library(pcre2.mbt STATIC src/pcre2.c)
+add_library(pcre2.mbt STATIC src/pcre2.c
+  $<TARGET_OBJECTS:pcre2-16-static>)
 add_library(pcre2.mbt::pcre2.mbt ALIAS pcre2.mbt)
 target_link_libraries(pcre2.mbt
-  PRIVATE c.mbt::c.mbt c.mbt::moonbit pcre2-16-static)
-set_target_properties(pcre2.mbt PROPERTIES
-  INTERFACE_LINK_LIBRARIES "")
+  PRIVATE c.mbt::c.mbt c.mbt::moonbit)
 
 include(GNUInstallDirs)
 
