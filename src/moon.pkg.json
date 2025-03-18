@@ -1,10 +1,5 @@
 {
   "import": ["tonyfettes/c"],
-  "link": {
-    "native": {
-      "cc-flags": "-g -fsanitize=address"
-    }
-  },
   "native-stub": [
     "pcre2.c",
     "pcre2_16/pcre2_auto_possess.c",

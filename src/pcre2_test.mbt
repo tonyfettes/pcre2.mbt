@@ -9,6 +9,7 @@ test "captures" {
       views.push(capture.view().to_string())
     }
   }
-  code.free()
-  @json.inspect!(views, content=["hell𐐷o", "hell𐐷o"])
+  @json.inspect!(views, content=[
+    "hell𐐷o", "hell𐐷o", "hell𐐷o", "hell𐐷o",
+  ])
 }
