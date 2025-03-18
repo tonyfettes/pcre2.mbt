@@ -25,64 +25,45 @@ pub fn compile(pattern : String) -> Code!Pcre2Error {
 }
 
 ///|
-struct Capture {
-  match_ : Match
-  name : String
-  index : Int
-}
-
-///|
-pub fn Capture::name(self : Capture) -> String {
-  self.name
-}
-
-///|
-pub fn Capture::range(self : Capture) -> (Int, Int) {
-  let start = self.match_.character_offsets[self.index * 2]
-  let end = self.match_.character_offsets[self.index * 2 + 1]
-  (start, end)
-}
-
-///|
-priv struct Pcre2StringView {
-  str : String
-  start : Int
-  end : Int
-}
-
-///|
-extern "c" fn Pcre2StringView::to(self : Pcre2StringView) -> @string.View = "moonbit_c_identity"
-
-///|
-extern "c" fn Pcre2StringView::of(view : @string.View) -> Pcre2StringView = "moonbit_c_identity"
-
-///|
-pub fn Capture::view(self : Capture) -> @string.View {
-  let start = self.match_.code_unit_offsets[self.index * 2]
-  let end = self.match_.code_unit_offsets[self.index * 2 + 1]
-  let view = Pcre2StringView::{ str: self.match_.subject, start, end }
-  view.to()
-}
-
-///|
 struct Match {
   subject : String
   code_unit_offsets : FixedArray[Int]
   character_offsets : FixedArray[Int]
-  captures : Array[Capture]
+  name_table : Map[String, Int]
 }
 
 ///|
-pub fn Match::offsets(self : Match) -> Iter[Int] {
-  self.character_offsets.iter()
+trait MatchIndex {
+  get(Match, Self) -> @string.View
 }
 
 ///|
-pub fn Match::ranges(self : Match) -> Iter2[Int, Int] {
+impl MatchIndex for Int with get(self : Match, index : Int) -> @string.View {
+  let start = self.character_offsets[index * 2]
+  let end = self.character_offsets[index * 2 + 1]
+  self.subject[start:end]
+}
+
+///|
+impl MatchIndex for String with get(self : Match, index : String) -> @string.View {
+  let index = self.name_table[index].unwrap()
+  let start = self.character_offsets[index * 2]
+  let end = self.character_offsets[index * 2 + 1]
+  self.subject[start:end]
+}
+
+///|
+pub fn Match::op_get[I : MatchIndex](self : Match, index : I) -> @string.View {
+  I::get(self, index)
+}
+
+///|
+pub fn Match::groups(self : Match) -> Iter2[Int, @string.View] {
   Iter2::new(fn(yield_) {
     for i in 0..<(self.character_offsets.length() / 2) {
-      match
-        yield_(self.character_offsets[i * 2], self.character_offsets[i * 2 + 1]) {
+      let start = self.character_offsets[2 * i]
+      let end = self.character_offsets[2 * i + 1]
+      match yield_(i, self.subject[start:end]) {
         IterEnd => return IterEnd
         IterContinue => continue
       }
@@ -92,11 +73,12 @@ pub fn Match::ranges(self : Match) -> Iter2[Int, Int] {
 }
 
 ///|
-pub fn Match::captures(self : Match) -> Iter2[String, Capture] {
+pub fn Match::named_groups(self : Match) -> Iter2[String, @string.View] {
   Iter2::new(fn(yield_) {
-    for capture in self.captures {
-      let name = capture.name
-      match yield_(name, capture) {
+    for name, index in self.name_table {
+      let start = self.character_offsets[2 * index]
+      let end = self.character_offsets[2 * index + 1]
+      match yield_(name, self.subject[start:end]) {
         IterEnd => return IterEnd
         IterContinue => continue
       }
@@ -369,7 +351,7 @@ pub fn Code::matches(self : Code, subject : String) -> Ator[Match]!Pcre2Error {
           subject,
           code_unit_offsets: FixedArray::make(2 * rc, 0),
           character_offsets: FixedArray::make(2 * rc, 0),
-          captures: [],
+          name_table: {},
         }
         for i in 0..<rc {
           match_.code_unit_offsets[2 * i] = ovector[2 * i].to_int()
@@ -410,7 +392,7 @@ pub fn Code::matches(self : Code, subject : String) -> Ator[Match]!Pcre2Error {
             name[j - 1] = name_table[j]
           }
           let name = array_to_string(name)
-          match_.captures.push(Capture::{ match_, name, index: n.to_int() })
+          match_.name_table.set(name, n.to_int())
         }
         return Some(match_)
       }
