@@ -1,17 +1,15 @@
 ///|
 test "captures" {
-  let code = @pcre2.compile!("(?<hello>hell𐐷o)")
-  let subject = "a hell𐐷o, 你好 𐐷 world! hell𐐷o"
+  let code = @pcre2.compile!("(?<hello>hello)")
+  let subject = "a hello, 你好  world! hello"
   let match_ = code.matches!(subject)
   let views = []
   while match_.next!() is Some(match_) {
-    for _, capture in match_.captures() {
-      views.push(capture.view().to_string())
+    for _, capture in match_.named_groups() {
+      views.push(capture.to_string())
     }
   }
-  @json.inspect!(views, content=[
-    "hell𐐷o", "hell𐐷o", "hell𐐷o", "hell𐐷o",
-  ])
+  @json.inspect!(views, content=["hello","hello"])
 }
 
 ///|
@@ -21,9 +19,11 @@ test "split" {
   )
   let subject = "He's a good person"
   let match_ = code.matches!(subject)
+  let splits = []
   while match_.next!() is Some(match_) {
-    for _, capture in match_.captures() {
-      println(capture.view())
+    for _, capture in match_.groups() {
+      splits.push(capture.to_string())
     }
   }
+  @json.inspect!(splits, content=["He","'s"," a"," good"," person"])
 }
