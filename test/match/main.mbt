@@ -5,8 +5,8 @@ fn main {
     let subject = "a hell𐐷o, 你好 𐐷 world! hell𐐷o"
     let match_ = code.matches!(subject)
     while match_.next!() is Some(match_) {
-      for name, capture in match_.captures() {
-        println("\{name}: \{capture.view()}")
+      for name, capture in match_.named_groups() {
+        println("\{name}: \{capture}")
       }
     }
   } catch {
