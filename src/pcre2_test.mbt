@@ -4,6 +4,7 @@ test "captures" {
   let subject = "a hello, 你好  world! hello"
   let views = []
   for match_ in code.matches!(subject) {
+    let match_ = match_.unwrap_or_error!()
     for _, capture in match_.named_groups() {
       views.push(capture.to_string())
     }
@@ -19,6 +20,7 @@ test "split" {
   let subject = "He's a good person"
   let splits = []
   for match_ in code.matches!(subject) {
+    let match_ = match_.unwrap_or_error!()
     for _, capture in match_.groups() {
       splits.push(capture.to_string())
     }
