@@ -415,7 +415,7 @@ fn Matches::next(self : Matches) -> Match?!Pcre2Error {
 pub fn Code::matches(
   self : Code,
   subject : String
-) -> Iter[Match]!Pcre2Error {
+) -> Iter[Result[Match, Pcre2Error]]!Pcre2Error {
   // The following code has been adapted from the pcre2demo.c file in the PCRE2
   // library.
   let match_data = pcre2_match_data_create_from_pattern(self._, @c.none())
@@ -612,7 +612,7 @@ pub fn Code::matches(
           let name = array_to_string(name)
           match_.name_table.set(name, n.to_int())
         }
-        if yield_(match_) is IterEnd {
+        if yield_(Ok(match_)) is IterEnd {
           pcre2_match_data_free(match_data)
           return IterEnd
         }
@@ -622,7 +622,7 @@ pub fn Code::matches(
     } catch {
       error => {
         pcre2_match_data_free(match_data)
-        abort("Code::match: Error: \{error}")
+        return yield_(Err(error))
       }
     }
   })
