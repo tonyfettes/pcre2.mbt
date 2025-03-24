@@ -195,12 +195,11 @@ moonbit_pcre2_SUBSTITUTE_OVERFLOW_LENGTH() {
 }
 
 typedef struct moonbit_pcre2_code {
-  struct moonbit_external_object *object;
   pcre2_code *code;
 } moonbit_pcre2_code;
 
 void
-moonbit_pcre2_code_free(void *object) {
+moonbit_pcre2_code_finalize(void *object) {
   moonbit_pcre2_code *code = (moonbit_pcre2_code *)object;
   if (code) {
     if (code->code) {
@@ -234,8 +233,10 @@ moonbit_pcre2_compile(
   moonbit_decref(pattern);
   moonbit_decref(error_code);
   moonbit_decref(error_offset);
-  moonbit_pcre2_code *moonbit_code = (moonbit_pcre2_code *)
-    moonbit_make_external_object(moonbit_pcre2_code_free, sizeof(pcre2_code *));
+  moonbit_pcre2_code *moonbit_code =
+    (moonbit_pcre2_code *)moonbit_make_external_object(
+      moonbit_pcre2_code_finalize, sizeof(pcre2_code *)
+    );
   moonbit_code->code = code;
   return moonbit_code;
 }
