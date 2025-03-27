@@ -639,7 +639,7 @@ pub fn substitute(
   let replacement_length = replacement.length().to_uint64()
   let output_length : FixedArray[UInt64] = [subject.length().to_uint64() * 2]
   while true {
-    let output = String::make(output_length[0].to_int(), '\x00')
+    let output = String::make(output_length[0].to_int(), '\u{00}')
     let options = pcre2_SUBSTITUTE_OVERFLOW_LENGTH()
     let start_offset = 0UL
     let rc = pcre2_substitute(
