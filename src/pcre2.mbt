@@ -41,19 +41,19 @@ trait MatchIndex {
 impl MatchIndex for Int with get(self : Match, index : Int) -> @string.View {
   let start = self.character_offsets[index * 2]
   let end = self.character_offsets[index * 2 + 1]
-  self.subject[start:end]
+  self.subject.view(start_offset=start, end_offset=end)
 }
 
 ///|
 impl MatchIndex for String with get(self : Match, index : String) -> @string.View {
-  let index = self.name_table[index].unwrap()
+  let index = self.name_table.get(index).unwrap()
   let start = self.character_offsets[index * 2]
   let end = self.character_offsets[index * 2 + 1]
-  self.subject[start:end]
+  self.subject.view(start_offset=start, end_offset=end)
 }
 
 ///|
-pub fn Match::op_get[I : MatchIndex](self : Match, index : I) -> @string.View {
+pub fn[I : MatchIndex] Match::op_get(self : Match, index : I) -> @string.View {
   I::get(self, index)
 }
 
@@ -63,7 +63,7 @@ pub fn Match::groups(self : Match) -> Iter2[Int, @string.View] {
     for i in 0..<(self.character_offsets.length() / 2) {
       let start = self.character_offsets[2 * i]
       let end = self.character_offsets[2 * i + 1]
-      match yield_(i, self.subject[start:end]) {
+      match yield_(i, self.subject.view(start_offset=start, end_offset=end)) {
         IterEnd => return IterEnd
         IterContinue => continue
       }
@@ -78,7 +78,8 @@ pub fn Match::named_groups(self : Match) -> Iter2[String, @string.View] {
     for name, index in self.name_table {
       let start = self.character_offsets[2 * index]
       let end = self.character_offsets[2 * index + 1]
-      match yield_(name, self.subject[start:end]) {
+      match
+        yield_(name, self.subject.view(start_offset=start, end_offset=end)) {
         IterEnd => return IterEnd
         IterContinue => continue
       }
@@ -98,13 +99,13 @@ pub type! Pcre2Error {
 ///|
 pub impl Show for Pcre2Error with output(self : Pcre2Error, logger : &Logger) -> Unit {
   fn write_error_message(code : Int, logger : &Logger) -> Unit {
-    let message = String::make(256, '\x00')
+    let message = String::make(256, '\u{00}')
     let length = message.length().to_uint64()
     let length = pcre2_get_error_message(code, message, length)
     if length < 0 {
       logger.write_string("Unknown error")
     } else {
-      logger.write_string([..message[:length]])
+      logger.write_string([..message.view(end_offset=length)])
     }
   }
 
@@ -134,7 +135,7 @@ pub impl Show for Pcre2Error with output(self : Pcre2Error, logger : &Logger) ->
 type Ator[T] () -> T?!Pcre2Error
 
 ///|
-pub fn Ator::next[T](self : Ator[T]) -> T?!Pcre2Error {
+pub fn[T] Ator::next(self : Ator[T]) -> T?!Pcre2Error {
   (self._)!()
 }
 
@@ -364,15 +365,14 @@ fn Matches::next(self : Matches) -> Match?!Pcre2Error {
       match_.code_unit_offsets[2 * i] = self.ovector[2 * i].to_int()
       match_.code_unit_offsets[2 * i + 1] = self.ovector[2 * i + 1].to_int()
     }
-    try {
+    try
       code_unit_to_character!(
         self.subject,
         code_unit_offsets=match_.code_unit_offsets,
         character_offsets=match_.character_offsets,
         start_code_unit_offset=self.start_code_unit_offset,
         start_character_offset=self.start_character_offset,
-      )
-    } catch {
+      ) catch {
       error => raise Pcre2Error::Unicode(error)
     }
 
@@ -575,15 +575,14 @@ pub fn Code::matches(
           match_.code_unit_offsets[2 * i] = ovector[2 * i].to_int()
           match_.code_unit_offsets[2 * i + 1] = ovector[2 * i + 1].to_int()
         }
-        try {
+        try
           code_unit_to_character!(
             subject,
             code_unit_offsets=match_.code_unit_offsets,
             character_offsets=match_.character_offsets,
             start_code_unit_offset~,
             start_character_offset~,
-          )
-        } catch {
+          ) catch {
           error => raise Pcre2Error::Unicode(error)
         }
 
