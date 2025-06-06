@@ -588,10 +588,10 @@ pub fn Matches::next(self : Matches) -> Match?!Pcre2Error {
       // zero terminated.
       let n = self.name_table[0]
       let name : FixedArray[UInt16] = FixedArray::make(
-        self.name_entry_size - 1,
+        self.name_entry_size - 2,
         0,
       )
-      for j in 1..<self.name_entry_size {
+      for j in 1..<(self.name_entry_size - 1) {
         name[j - 1] = self.name_table[j]
       }
       let name = array_to_string(name)

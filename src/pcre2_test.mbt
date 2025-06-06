@@ -12,6 +12,13 @@ test "captures" {
   @json.inspect!(views, content=["hello", "hello"])
 }
 
+test "named_groups" {
+  let code = @pcre2.compile!("(?<num>\\d+)")
+  let matches = code.matches!("number: 42")
+  let match_result = matches.next().unwrap()
+  @json.inspect(match_result["num"], content="42")
+}
+
 ///|
 test "split" {
   let code = @pcre2.compile!(
