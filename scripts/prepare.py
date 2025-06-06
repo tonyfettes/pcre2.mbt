@@ -7,7 +7,6 @@ headers = ["pcre2_internal.h"]
 sources = [
     "pcre2_auto_possess.c",
     "pcre2_chkdint.c",
-    "pcre2_chartables.c",
     "pcre2_compile.c",
     "pcre2_compile_cgroup.c",
     "pcre2_compile_class.c",
@@ -46,11 +45,8 @@ def prepend_macros(file: Path, macros: list[tuple[str, str]]):
 
 
 def prepare(source: Path, target: Path, code_unit_width: int = 8 | 16 | 32):
-    if target.exists():
-        shutil.rmtree(target)
-    target.mkdir(parents=True)
-    shutil.copy(source / "config.h.generic", target / "config.h")
-    config_h_content = (target / "config.h").read_text()
+    ignored: list[str] = []
+    config_h_content = (source / "config.h.generic").read_text()
     config_h_content += f"""
 #define HAVE_MEMMOVE 1
 #define HAVE_STRERROR 1
@@ -58,7 +54,9 @@ def prepare(source: Path, target: Path, code_unit_width: int = 8 | 16 | 32):
 #define SUPPORT_UNICODE 1
 """
     (target / "config.h").write_text(config_h_content)
+    ignored.append("config.h")
     shutil.copy(source / "pcre2.h.generic", target / "pcre2.h")
+    ignored.append("pcre2.h")
 
     macros = [
         ("HAVE_CONFIG_H", "1"),
@@ -66,35 +64,33 @@ def prepare(source: Path, target: Path, code_unit_width: int = 8 | 16 | 32):
     ]
     shutil.copy(source / "pcre2_chartables.c.dist", target / "pcre2_chartables.c")
     prepend_macros(target / "pcre2_chartables.c", macros)
+    ignored.append("pcre2_chartables.c")
     for h in source.glob("*.h"):
         t = target / (h.relative_to(source))
-        if t.exists():
-            continue
+        print(f"COPY {s} -> {target}")
         shutil.copy(h, t)
+        ignored.append(h.relative_to(source).as_posix())
 
     for s in sources:
         t = target / s
-        if t.exists():
-            continue
+        print(f"COPY {s} -> {target}")
         shutil.copy(source / s, t)
         prepend_macros(t, macros)
-    moon_pkg_json = {
-        "import": [
-            "tonyfettes/c"
-        ],
-        "native-stub": sources
-    }
+        ignored.append(s)
+    moon_pkg_json = {"import": ["tonyfettes/c"], "native-stub": sources}
     (target / "moon.pkg.json").write_text(json.dumps(moon_pkg_json, indent=2))
 
     moon_pkg_json = json.loads(Path("src/moon.pkg.json").read_text())
-    moon_pkg_json["native-stub"] = ["pcre2.c"] + [
+    moon_pkg_json["native-stub"] = ["pcre2.c", "pcre2_chartables.c"] + [
         str(target.relative_to("src") / s) for s in sources
     ]
     Path("src/moon.pkg.json").write_text(json.dumps(moon_pkg_json, indent=2) + "\n")
+    ignored.sort()
+    Path("src/.gitignore").write_text("\n".join(ignored) + "\n")
 
 
 def main():
-    prepare(Path("src/pcre2/src"), Path("src/pcre2_16"), code_unit_width=16)
+    prepare(Path("src/pcre2/src"), Path("src"), code_unit_width=16)
 
 
 if __name__ == "__main__":
