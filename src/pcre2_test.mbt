@@ -3,9 +3,9 @@ test "captures" {
   let code = @pcre2.compile!("(?<hello>hello)")
   let subject = "a hello, 你好  world! hello"
   let views = []
-  for match_ in code.matches!(subject) {
-    let match_ = match_.unwrap_or_error!()
-    for _, capture in match_.named_groups() {
+  let matches = code.matches!(subject)
+  while matches.next() is Some(matched) {
+    for _, capture in matched.named_groups() {
       views.push(capture.to_string())
     }
   }
@@ -19,8 +19,8 @@ test "split" {
   )
   let subject = "He's a good person"
   let splits = []
-  for match_ in code.matches!(subject) {
-    let match_ = match_.unwrap_or_error!()
+  let matches = code.matches!(subject)
+  while matches.next() is Some(match_) {
     for _, capture in match_.groups() {
       splits.push(capture.to_string())
     }

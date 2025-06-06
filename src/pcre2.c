@@ -1,6 +1,6 @@
 #include <stdint.h>
 #define PCRE2_CODE_UNIT_WIDTH 16
-#include "pcre2_16/pcre2.h"
+#include "pcre2.h"
 #include <moonbit.h>
 
 #define static_assert_type_equal(type, expected)                               \
@@ -241,7 +241,21 @@ moonbit_pcre2_compile(
   return moonbit_code;
 }
 
-pcre2_match_data *
+typedef struct moonbit_pcre2_match_data {
+  pcre2_match_data *match_data;
+} moonbit_pcre2_match_data;
+
+static inline void
+moonbit_pcre2_match_data_finalize(void *object) {
+  moonbit_pcre2_match_data *match_data = (moonbit_pcre2_match_data *)object;
+  if (match_data) {
+    if (match_data->match_data) {
+      pcre2_match_data_free(match_data->match_data);
+    }
+  }
+}
+
+moonbit_pcre2_match_data *
 moonbit_pcre2_match_data_create_from_pattern(
   moonbit_pcre2_code *code,
   pcre2_general_context *context
@@ -249,7 +263,28 @@ moonbit_pcre2_match_data_create_from_pattern(
   pcre2_match_data *match_data =
     pcre2_match_data_create_from_pattern(code->code, context);
   moonbit_decref(code);
-  return match_data;
+  moonbit_pcre2_match_data *moonbit_match_data =
+    (moonbit_pcre2_match_data *)moonbit_make_external_object(
+      moonbit_pcre2_match_data_finalize, sizeof(pcre2_match_data *)
+    );
+  moonbit_match_data->match_data = match_data;
+  return moonbit_match_data;
+}
+
+PCRE2_SIZE *
+moonbit_pcre2_get_ovector_pointer(moonbit_pcre2_match_data *match_data) {
+  PCRE2_SIZE *ovector = pcre2_get_ovector_pointer(match_data->match_data);
+  moonbit_decref(match_data);
+  return ovector;
+}
+
+PCRE2_SIZE
+moonbit_pcre2_get_startchar(
+  moonbit_pcre2_match_data *match_data
+) {
+  PCRE2_SIZE startchar = pcre2_get_startchar(match_data->match_data);
+  moonbit_decref(match_data);
+  return startchar;
 }
 
 int32_t
@@ -259,15 +294,16 @@ moonbit_pcre2_match(
   PCRE2_SIZE length,
   PCRE2_SIZE start_offset,
   uint32_t options,
-  pcre2_match_data *match_data,
+  moonbit_pcre2_match_data *match_data,
   pcre2_match_context *match_context
 ) {
   int32_t captures = pcre2_match(
-    code->code, subject, length, start_offset, options, match_data,
+    code->code, subject, length, start_offset, options, match_data->match_data,
     match_context
   );
   moonbit_decref(code);
   moonbit_decref(subject);
+  moonbit_decref(match_data);
   return captures;
 }
 
