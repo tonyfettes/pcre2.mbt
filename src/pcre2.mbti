@@ -11,13 +11,16 @@ fn substitute(Code, String, String) -> String
 
 // Types and methods
 type Code
-fn Code::matches(Self, String) -> Iter[Result[Match, Pcre2Error]]!Pcre2Error
+fn Code::matches(Self, String) -> Matches!Pcre2Error
 fn Code::substitute(Self, String, String) -> String
 
 type Match
 fn Match::groups(Self) -> Iter2[Int, @string.StringView]
 fn Match::named_groups(Self) -> Iter2[String, @string.StringView]
-fn[I : MatchIndex] Match::op_get(Self, I) -> @string.StringView
+fn[Index : MatchIndex] Match::op_get(Self, Index) -> @string.StringView
+
+type Matches
+fn Matches::next(Self) -> Match?!Pcre2Error
 
 pub type! Pcre2Error {
   LookaroundBSK
@@ -46,4 +49,6 @@ impl Show for UnicodeError
 
 // Traits
 trait MatchIndex
+impl MatchIndex for Int
+impl MatchIndex for String
 

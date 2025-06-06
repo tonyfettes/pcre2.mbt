@@ -263,8 +263,8 @@ pub impl MatchIndex for String with get(self : Match, index : String) -> @string
 }
 
 ///|
-pub fn[I : MatchIndex] Match::op_get(self : Match, index : I) -> @string.View {
-  I::get(self, index)
+pub fn[Index : MatchIndex] Match::op_get(self : Match, index : Index) -> @string.View {
+  Index::get(self, index)
 }
 
 ///|
@@ -437,6 +437,64 @@ fn Matches::update_offsets(self : Matches, offset : Int) -> Unit!Pcre2Error {
 }
 
 ///|
+/// Retrieves the next match from the iterator, advancing the internal state to
+/// find subsequent matches in the subject string.
+///
+/// This method implements the core pattern matching logic, handling various edge
+/// cases including empty matches, lookaround assertions with `\K`, and proper
+/// Unicode character boundary handling. It maintains internal state to ensure
+/// all matches are found in sequence without duplicates or infinite loops.
+///
+/// Parameters:
+///
+/// * `self` : The `Matches` iterator containing the compiled pattern, subject
+/// string, and matching state.
+///
+/// Returns `Some(Match)` containing the next match with capturing groups and
+/// named groups, or `None` if no more matches are found.
+///
+/// Throws `Pcre2Error` in the following cases:
+///
+/// * `Pcre2Error::Code(Int)` for general PCRE2 matching errors
+/// * `Pcre2Error::Unicode(UnicodeError)` for Unicode-related errors during
+/// character offset conversion
+/// * `Pcre2Error::LookaroundBSK` when encountering problematic lookaround
+/// assertions with `\K`
+///
+/// Examples:
+///
+/// ```moonbit
+/// test "Matches::next" {
+///   let pattern = @pcre2.compile("\\d+")
+///   let matches = pattern.matches("abc123def456")
+///   let first = matches.next().unwrap()
+///   inspect(first[0], content="123")
+///   let second = matches.next().unwrap()
+///   inspect(second[0], content="456")
+///   assert_true(matches.next() is None)
+/// }
+/// ```
+///
+/// ```moonbit
+/// test "Matches::next/empty_matches" {
+///   let pattern = @pcre2.compile("a*")
+///   let matches = pattern.matches("aabaa")
+///   let first = matches.next().unwrap()
+///   inspect(first[0], content="aa")
+///   let second = matches.next().unwrap()
+///   inspect(second[0], content="")  // empty match between 'b' and 'a'
+/// }
+/// ```
+///
+/// ```moonbit
+/// test "Matches::next/named_groups" {
+///   let pattern = @pcre2.compile("(?P<num>\\d+)")
+///   let matches = pattern.matches("number: 42")
+///   let match_result = matches.next().unwrap()
+///   inspect(match_result["num"], content="42")
+///   inspect(match_result[0], content="42")
+/// }
+/// ```
 pub fn Matches::next(self : Matches) -> Match?!Pcre2Error {
   guard self.match_data is Some(match_data) else { return None }
   fn next() -> Match?!Pcre2Error {
@@ -458,7 +516,7 @@ pub fn Matches::next(self : Matches) -> Match?!Pcre2Error {
     } else {
       let mut options = 0U // Normally no options
       let mut start_offset = self.ovector[1] // Start at end of previous match
-      self.update_offsets!(start_offset.to_int())
+      self.update_offsets(start_offset.to_int())
 
       // If the previous match was for an empty string, we are finished if we are
       // at the end of the subject. Otherwise, arrange to run another match at the
@@ -522,7 +580,7 @@ pub fn Matches::next(self : Matches) -> Match?!Pcre2Error {
         }
         // NOTE(translator): The original code test if the UTF8 flag is set. However,
         // we are using UTF16, so we can skip the check.
-        return self.next!() // Go round the loop again
+        return self.next() // Go round the loop again
       }
       rc
     }
@@ -562,7 +620,7 @@ pub fn Matches::next(self : Matches) -> Match?!Pcre2Error {
       matched.code_unit_offsets[2 * i + 1] = self.ovector[2 * i + 1].to_int()
     }
     try
-      code_unit_to_character!(
+      code_unit_to_character(
         self.subject,
         code_unit_offsets=matched.code_unit_offsets,
         character_offsets=matched.character_offsets,
@@ -633,13 +691,13 @@ pub fn Matches::next(self : Matches) -> Match?!Pcre2Error {
 ///
 /// ```moonbit
 /// test "Code::matches" {
-///   let pattern = compile!("[0-9]+")
-///   let matches = pattern.matches!("abc123def456")
-///   let first = matches.next!().unwrap()
-///   inspect!(first[0], content="123")
-///   let second = matches.next!().unwrap()
-///   inspect!(second[0], content="456")
-///   assert_true!(matches.next!() is None)
+///   let pattern = @pcre2.compile("[0-9]+")
+///   let matches = pattern.matches("abc123def456")
+///   let first = matches.next().unwrap()
+///   inspect(first[0], content="123")
+///   let second = matches.next().unwrap()
+///   inspect(second[0], content="456")
+///   assert_true(matches.next() is None)
 /// }
 /// ```
 pub fn Code::matches(self : Code, subject : String) -> Matches!Pcre2Error {
@@ -647,16 +705,16 @@ pub fn Code::matches(self : Code, subject : String) -> Matches!Pcre2Error {
   // library.
   let match_data = pcre2_match_data_create_from_pattern(self._, @c.none())
   let subject_length = subject.length().to_uint64()
-  let crlf_is_newline = match self.newline!() {
+  let crlf_is_newline = match self.newline() {
     Any | CRLF | AnyCRLF => true
     _ => false
   }
   let ovector = @c.null()
   let start_code_unit_offset = 0
   let start_character_offset = 0
-  let name_count = self.name_count!().reinterpret_as_int()
-  let name_table = self.name_table!()
-  let name_entry_size = self.name_entry_size!().reinterpret_as_int()
+  let name_count = self.name_count().reinterpret_as_int()
+  let name_table = self.name_table()
+  let name_entry_size = self.name_entry_size().reinterpret_as_int()
   return Matches::{
     code: self,
     subject,
