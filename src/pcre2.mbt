@@ -248,14 +248,14 @@ trait MatchIndex {
 }
 
 ///|
-impl MatchIndex for Int with get(self : Match, index : Int) -> @string.View {
+pub impl MatchIndex for Int with get(self : Match, index : Int) -> @string.View {
   let start = self.character_offsets[index * 2]
   let end = self.character_offsets[index * 2 + 1]
   self.subject.view(start_offset=start, end_offset=end)
 }
 
 ///|
-impl MatchIndex for String with get(self : Match, index : String) -> @string.View {
+pub impl MatchIndex for String with get(self : Match, index : String) -> @string.View {
   let index = self.name_table.get(index).unwrap()
   let start = self.character_offsets[index * 2]
   let end = self.character_offsets[index * 2 + 1]
@@ -616,6 +616,32 @@ pub fn Matches::next(self : Matches) -> Match?!Pcre2Error {
 }
 
 ///|
+/// Creates an iterator over all matches of the pattern in a subject string. Each
+/// match contains both numbered and named capturing groups.
+///
+/// Parameters:
+///
+/// * `self` : A compiled regular expression pattern.
+/// * `subject` : The string to search for matches.
+///
+/// Returns a `Matches` iterator that yields each match in sequence. Each match
+/// contains information about the matched substring and any capturing groups.
+///
+/// Throws `Pcre2Error` if an error occurs during pattern matching.
+///
+/// Example:
+///
+/// ```moonbit
+/// test "Code::matches" {
+///   let pattern = compile!("[0-9]+")
+///   let matches = pattern.matches!("abc123def456")
+///   let first = matches.next!().unwrap()
+///   inspect!(first[0], content="123")
+///   let second = matches.next!().unwrap()
+///   inspect!(second[0], content="456")
+///   assert_true!(matches.next!() is None)
+/// }
+/// ```
 pub fn Code::matches(self : Code, subject : String) -> Matches!Pcre2Error {
   // The following code has been adapted from the pcre2demo.c file in the PCRE2
   // library.
