@@ -132,14 +132,6 @@ pub impl Show for Pcre2Error with output(self : Pcre2Error, logger : &Logger) ->
 }
 
 ///|
-type Ator[T] () -> T?!Pcre2Error
-
-///|
-pub fn[T] Ator::next(self : Ator[T]) -> T?!Pcre2Error {
-  (self._)!()
-}
-
-///|
 fn array_to_string(array : FixedArray[UInt16]) -> String = "%identity"
 
 ///|
@@ -149,13 +141,13 @@ pub type! UnicodeError {
 } derive(Show)
 
 ///|
-fn is_leading_surrogate(c : Char) -> Bool {
-  c.to_int() is (0xD800..=0xDBFF)
+fn is_leading_surrogate(c : Int) -> Bool {
+  c is (0xD800..=0xDBFF)
 }
 
 ///|
-fn is_trailing_surrogate(c : Char) -> Bool {
-  c.to_int() is (0xDC00..=0xDFFF)
+fn is_trailing_surrogate(c : Int) -> Bool {
+  c is (0xDC00..=0xDFFF)
 }
 
 ///|
@@ -176,12 +168,12 @@ fn code_unit_to_character(
   let mut code_unit_offset = start_code_unit_offset
   for oi in offsets_indices {
     while code_unit_offset < code_unit_offsets[oi] {
-      let c1 = string[code_unit_offset]
+      let c1 = string.charcode_at(code_unit_offset)
       if is_leading_surrogate(c1) {
         if code_unit_offset + 1 == code_unit_offsets[oi] {
           raise InvalidCodeUnitOffset(code_unit_offsets[oi])
         }
-        let c2 = string[code_unit_offset + 1]
+        let c2 = string.charcode_at(code_unit_offset + 1)
         if is_trailing_surrogate(c2) {
           code_unit_offset += 2
           character_offset += 1
@@ -215,12 +207,12 @@ struct Matches {
 ///|
 fn Matches::update_offsets(self : Matches, offset : Int) -> Unit!Pcre2Error {
   while self.start_code_unit_offset < offset {
-    let c1 = self.subject[self.start_code_unit_offset]
+    let c1 = self.subject.charcode_at(self.start_code_unit_offset)
     if is_leading_surrogate(c1) {
       if self.start_code_unit_offset + 1 == offset {
         raise Pcre2Error::Unicode(InvalidCodeUnitOffset(offset))
       }
-      let c2 = self.subject[self.start_code_unit_offset + 1]
+      let c2 = self.subject.charcode_at(self.start_code_unit_offset + 1)
       if is_trailing_surrogate(c2) {
         self.start_code_unit_offset += 2
         self.start_character_offset += 1
@@ -320,8 +312,8 @@ fn Matches::next(self : Matches) -> Match?!Pcre2Error {
         self.ovector[1] = start_offset + 1 // Advance one code unit
         if self.crlf_is_newline && // If CRLF is a newline & we are at CRLF
           start_offset < self.subject_length - 1 &&
-          self.subject[start_offset.to_int()] == '\r' &&
-          self.subject[start_offset.to_int() + 1] == '\n' {
+          self.subject.charcode_at(start_offset.to_int()) == '\r' &&
+          self.subject.charcode_at(start_offset.to_int() + 1) == '\n' {
           self.ovector[1] += 1 // Advance by one more code unit
         }
         // NOTE(translator): The original code test if the UTF8 flag is set. However,
@@ -432,12 +424,12 @@ pub fn Code::matches(
   let name_entry_size = self.name_entry_size!().reinterpret_as_int()
   fn update_offsets(offset : Int) -> Unit!Pcre2Error {
     while start_code_unit_offset < offset {
-      let c1 = subject[start_code_unit_offset]
+      let c1 = subject.charcode_at(start_code_unit_offset)
       if is_leading_surrogate(c1) {
         if start_code_unit_offset + 1 == offset {
           raise Pcre2Error::Unicode(InvalidCodeUnitOffset(offset))
         }
-        let c2 = subject[start_code_unit_offset + 1]
+        let c2 = subject.charcode_at(start_code_unit_offset + 1)
         if is_trailing_surrogate(c2) {
           start_code_unit_offset += 2
           start_character_offset += 1
@@ -530,8 +522,8 @@ pub fn Code::matches(
             ovector[1] = start_offset + 1 // Advance one code unit
             if crlf_is_newline && // If CRLF is a newline & we are at CRLF
               start_offset < subject_length - 1 &&
-              subject[start_offset.to_int()] == '\r' &&
-              subject[start_offset.to_int() + 1] == '\n' {
+              subject.charcode_at(start_offset.to_int()) == '\r' &&
+              subject.charcode_at(start_offset.to_int() + 1) == '\n' {
               ovector[1] += 1 // Advance by one more code unit
             }
             // NOTE(translator): The original code test if the UTF8 flag is set. However,

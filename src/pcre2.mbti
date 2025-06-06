@@ -1,43 +1,29 @@
-package tonyfettes/pcre2
+package "tonyfettes/pcre2"
 
-alias @moonbitlang/core/string as @string
+import(
+  "moonbitlang/core/string"
+)
 
 // Values
-fn compile(String) -> Code
+fn compile(String) -> Code!Pcre2Error
 
 fn substitute(Code, String, String) -> String
 
 // Types and methods
-type Ator[T]
-impl Ator {
-  next[T](Self[T]) -> T?!Pcre2Error
-}
-
-type Capture
-impl Capture {
-  name(Self) -> String
-  range(Self) -> (Int, Int)
-  view(Self) -> @string.StringView
-}
-
 type Code
-impl Code {
-  free(Self) -> Unit
-  matches(Self, String) -> Ator[Match]
-  substitute(Self, String, String) -> String
-}
+fn Code::matches(Self, String) -> Iter[Result[Match, Pcre2Error]]!Pcre2Error
+fn Code::substitute(Self, String, String) -> String
 
 type Match
-impl Match {
-  captures(Self) -> Iter2[String, Capture]
-  offsets(Self) -> Iter[Int]
-  ranges(Self) -> Iter2[Int, Int]
-}
+fn Match::groups(Self) -> Iter2[Int, @string.StringView]
+fn Match::named_groups(Self) -> Iter2[String, @string.StringView]
+fn[I : MatchIndex] Match::op_get(Self, I) -> @string.StringView
 
 pub type! Pcre2Error {
   LookaroundBSK
   Unicode(UnicodeError)
-  Error(String)
+  Compile(String, Int, UInt64)
+  Code(Int)
 }
 impl Show for Pcre2Error
 
@@ -59,4 +45,5 @@ impl Show for UnicodeError
 // Type aliases
 
 // Traits
+trait MatchIndex
 
