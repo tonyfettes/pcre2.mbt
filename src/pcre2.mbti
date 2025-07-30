@@ -1,3 +1,4 @@
+// Generated using `moon info`, DON'T EDIT IT
 package "tonyfettes/pcre2"
 
 import(
@@ -5,13 +6,26 @@ import(
 )
 
 // Values
-fn compile(String) -> Code!Pcre2Error
+fn compile(String) -> Code raise Pcre2Error
 
-fn substitute(Code, String, String) -> String
+// Errors
+pub suberror Pcre2Error {
+  LookaroundBSK
+  Unicode(UnicodeError)
+  Compile(String, Int, UInt64)
+  Code(Int)
+}
+impl Show for Pcre2Error
+
+pub suberror UnicodeError {
+  InvalidCodeUnitOffset(Int)
+  InvalidSurrogatePair
+}
+impl Show for UnicodeError
 
 // Types and methods
 type Code
-fn Code::matches(Self, String) -> Matches!Pcre2Error
+fn Code::matches(Self, String) -> Matches raise Pcre2Error
 fn Code::substitute(Self, String, String) -> String
 
 type Match
@@ -20,15 +34,7 @@ fn Match::named_groups(Self) -> Iter2[String, @string.StringView]
 fn[Index : MatchIndex] Match::op_get(Self, Index) -> @string.StringView
 
 type Matches
-fn Matches::next(Self) -> Match?!Pcre2Error
-
-pub type! Pcre2Error {
-  LookaroundBSK
-  Unicode(UnicodeError)
-  Compile(String, Int, UInt64)
-  Code(Int)
-}
-impl Show for Pcre2Error
+fn Matches::next(Self) -> Match? raise Pcre2Error
 
 pub enum Pcre2Newline {
   CR
@@ -38,12 +44,6 @@ pub enum Pcre2Newline {
   AnyCRLF
   Nul
 }
-
-pub type! UnicodeError {
-  InvalidCodeUnitOffset(Int)
-  InvalidSurrogatePair
-}
-impl Show for UnicodeError
 
 // Type aliases
 
