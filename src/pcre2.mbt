@@ -68,9 +68,13 @@ fn Pcre2Newline::of_uint(value : UInt) -> Pcre2Newline {
 }
 
 ///|
-fn Code::newline(self : Code) -> Pcre2Newline!Pcre2Error {
+fn Code::newline(self : Code) -> Pcre2Newline raise Pcre2Error {
   let newline = FixedArray::make(1, 0U)
-  let result = pcre2_pattern_info_uint(self._, pcre2_INFO_NEWLINE(), newline)
+  let result = pcre2_pattern_info_uint(
+    self.inner(),
+    pcre2_INFO_NEWLINE(),
+    newline,
+  )
   if result != 0 {
     raise Pcre2Error::Code(result)
   }
@@ -78,10 +82,10 @@ fn Code::newline(self : Code) -> Pcre2Newline!Pcre2Error {
 }
 
 ///|
-fn Code::name_count(self : Code) -> UInt!Pcre2Error {
+fn Code::name_count(self : Code) -> UInt raise Pcre2Error {
   let name_count = FixedArray::make(1, 0U)
   let result = pcre2_pattern_info_uint(
-    self._,
+    self.inner(),
     pcre2_INFO_NAMECOUNT(),
     name_count,
   )
@@ -92,10 +96,10 @@ fn Code::name_count(self : Code) -> UInt!Pcre2Error {
 }
 
 ///|
-fn Code::name_table(self : Code) -> @c.Pointer[UInt16]!Pcre2Error {
+fn Code::name_table(self : Code) -> @c.Pointer[UInt16] raise Pcre2Error {
   let name_table = FixedArray::make(1, @c.null())
   let result = pcre2_pattern_info_uint16_pointer(
-    self._,
+    self.inner(),
     pcre2_INFO_NAMETABLE(),
     name_table,
   )
@@ -106,10 +110,10 @@ fn Code::name_table(self : Code) -> @c.Pointer[UInt16]!Pcre2Error {
 }
 
 ///|
-fn Code::name_entry_size(self : Code) -> UInt!Pcre2Error {
+fn Code::name_entry_size(self : Code) -> UInt raise Pcre2Error {
   let name_entry_size = FixedArray::make(1, 0U)
   let result = pcre2_pattern_info_uint(
-    self._,
+    self.inner(),
     pcre2_INFO_NAMEENTRYSIZE(),
     name_entry_size,
   )
@@ -123,25 +127,28 @@ fn Code::name_entry_size(self : Code) -> UInt!Pcre2Error {
 priv type Pcre2Code
 
 ///|
-priv extern type Pcre2CompileContext
+#external
+priv type Pcre2CompileContext
 
 ///|
-priv extern type Pcre2GeneralContext
+#external
+priv type Pcre2GeneralContext
 
 ///|
 priv type Pcre2MatchData
 
 ///|
-priv extern type Pcre2MatchContext
+#external
+priv type Pcre2MatchContext
 
 ///|
-typealias Pcre2Size = UInt64
+typealias UInt64 as Pcre2Size
 
 ///|
 extern "c" fn pcre2_get_error_message(
   error_code : Int,
   buffer : String,
-  buffer_length : Pcre2Size
+  buffer_length : Pcre2Size,
 ) -> Int = "moonbit_pcre2_get_error_message"
 
 ///|
@@ -151,18 +158,18 @@ extern "c" fn pcre2_compile(
   options : UInt,
   error_code : FixedArray[Int],
   error_offset : FixedArray[Pcre2Size],
-  context : @c.Nullable[Pcre2CompileContext]
+  context : @c.Nullable[Pcre2CompileContext],
 ) -> @c.Nullable[Pcre2Code] = "moonbit_pcre2_compile"
 
 ///|
 extern "c" fn pcre2_match_data_create_from_pattern(
   code : Pcre2Code,
-  context : @c.Nullable[Pcre2GeneralContext]
+  context : @c.Nullable[Pcre2GeneralContext],
 ) -> Pcre2MatchData = "moonbit_pcre2_match_data_create_from_pattern"
 
 ///|
 extern "c" fn pcre2_get_ovector_pointer(
-  match_data : Pcre2MatchData
+  match_data : Pcre2MatchData,
 ) -> @c.Pointer[Pcre2Size] = "moonbit_pcre2_get_ovector_pointer"
 
 ///|
@@ -177,7 +184,7 @@ extern "c" fn pcre2_substitute(
   replacement : String,
   replacement_length : Pcre2Size,
   output_buffer : String,
-  output_length : FixedArray[Pcre2Size]
+  output_length : FixedArray[Pcre2Size],
 ) -> Int = "pcre2_substitute_16"
 
 ///|
@@ -191,28 +198,28 @@ extern "c" fn pcre2_match(
   start_offset : Pcre2Size,
   options : UInt,
   match_data : Pcre2MatchData,
-  context : @c.Nullable[Pcre2MatchContext]
+  context : @c.Nullable[Pcre2MatchContext],
 ) -> Int = "moonbit_pcre2_match"
 
 ///|
 extern "c" fn pcre2_pattern_info_uint(
   code : Pcre2Code,
   what : UInt,
-  where_ : FixedArray[UInt]
+  where_ : FixedArray[UInt],
 ) -> Int = "moonbit_pcre2_pattern_info_uint32"
 
 ///|
 extern "c" fn pcre2_pattern_info_uint16_pointer(
   code : Pcre2Code,
   what : UInt,
-  where_ : FixedArray[@c.Pointer[UInt16]]
+  where_ : FixedArray[@c.Pointer[UInt16]],
 ) -> Int = "moonbit_pcre2_pattern_info_uint16_pointer"
 
 ///|
 type Code Pcre2Code
 
 ///|
-pub fn compile(pattern : String) -> Code!Pcre2Error {
+pub fn compile(pattern : String) -> Code raise Pcre2Error {
   let error_code = FixedArray::make(1, 0)
   let error_offset = FixedArray::make(1, (0 : Pcre2Size))
   let code = pcre2_compile(
@@ -263,7 +270,10 @@ pub impl MatchIndex for String with get(self : Match, index : String) -> @string
 }
 
 ///|
-pub fn[Index : MatchIndex] Match::op_get(self : Match, index : Index) -> @string.View {
+pub fn[Index : MatchIndex] Match::op_get(
+  self : Match,
+  index : Index,
+) -> @string.View {
   Index::get(self, index)
 }
 
@@ -299,7 +309,7 @@ pub fn Match::named_groups(self : Match) -> Iter2[String, @string.View] {
 }
 
 ///|
-pub type! Pcre2Error {
+pub suberror Pcre2Error {
   LookaroundBSK
   Unicode(UnicodeError)
   Compile(String, Int, Pcre2Size)
@@ -326,8 +336,8 @@ pub impl Show for Pcre2Error with output(self : Pcre2Error, logger : &Logger) ->
       logger.write_string("Compilation error @ \{offset}: ")
       write_error_message(code, logger)
       logger.write_char('\n')
-      let start = @math.maximum(0, offset.to_int() - 10)
-      let end = @math.minimum(pattern.length(), offset.to_int() + 10)
+      let start = @cmp.maximum(0, offset.to_int() - 10)
+      let end = @cmp.minimum(pattern.length(), offset.to_int() + 10)
       logger.write_substring(pattern, start, end)
       for _ in 0..<start {
         logger.write_char(' ')
@@ -345,7 +355,7 @@ pub impl Show for Pcre2Error with output(self : Pcre2Error, logger : &Logger) ->
 fn array_to_string(array : FixedArray[UInt16]) -> String = "%identity"
 
 ///|
-pub type! UnicodeError {
+pub suberror UnicodeError {
   InvalidCodeUnitOffset(Int)
   InvalidSurrogatePair
 } derive(Show)
@@ -366,8 +376,8 @@ fn code_unit_to_character(
   code_unit_offsets~ : FixedArray[Int],
   character_offsets~ : FixedArray[Int],
   start_code_unit_offset~ : Int,
-  start_character_offset~ : Int
-) -> Unit!UnicodeError {
+  start_character_offset~ : Int,
+) -> Unit raise UnicodeError {
   let offsets_indices = FixedArray::makei(code_unit_offsets.length(), fn(i) {
     i
   })
@@ -378,12 +388,12 @@ fn code_unit_to_character(
   let mut code_unit_offset = start_code_unit_offset
   for oi in offsets_indices {
     while code_unit_offset < code_unit_offsets[oi] {
-      let c1 = string.charcode_at(code_unit_offset)
+      let c1 = string[code_unit_offset]
       if is_leading_surrogate(c1) {
         if code_unit_offset + 1 == code_unit_offsets[oi] {
           raise InvalidCodeUnitOffset(code_unit_offsets[oi])
         }
-        let c2 = string.charcode_at(code_unit_offset + 1)
+        let c2 = string[code_unit_offset + 1]
         if is_trailing_surrogate(c2) {
           code_unit_offset += 2
           character_offset += 1
@@ -415,14 +425,17 @@ struct Matches {
 }
 
 ///|
-fn Matches::update_offsets(self : Matches, offset : Int) -> Unit!Pcre2Error {
+fn Matches::update_offsets(
+  self : Matches,
+  offset : Int,
+) -> Unit raise Pcre2Error {
   while self.start_code_unit_offset < offset {
-    let c1 = self.subject.charcode_at(self.start_code_unit_offset)
+    let c1 = self.subject[self.start_code_unit_offset]
     if is_leading_surrogate(c1) {
       if self.start_code_unit_offset + 1 == offset {
         raise Pcre2Error::Unicode(InvalidCodeUnitOffset(offset))
       }
-      let c2 = self.subject.charcode_at(self.start_code_unit_offset + 1)
+      let c2 = self.subject[self.start_code_unit_offset + 1]
       if is_trailing_surrogate(c2) {
         self.start_code_unit_offset += 2
         self.start_character_offset += 1
@@ -464,43 +477,37 @@ fn Matches::update_offsets(self : Matches, offset : Int) -> Unit!Pcre2Error {
 /// Examples:
 ///
 /// ```moonbit
-/// test "Matches::next" {
-///   let pattern = @pcre2.compile("\\d+")
-///   let matches = pattern.matches("abc123def456")
-///   let first = matches.next().unwrap()
-///   inspect(first[0], content="123")
-///   let second = matches.next().unwrap()
-///   inspect(second[0], content="456")
-///   assert_true(matches.next() is None)
-/// }
+/// let pattern = @pcre2.compile("\\d+")
+/// let matches = pattern.matches("abc123def456")
+/// let first = matches.next().unwrap()
+/// inspect(first[0], content="123")
+/// let second = matches.next().unwrap()
+/// inspect(second[0], content="456")
+/// assert_true(matches.next() is None)
 /// ```
 ///
 /// ```moonbit
-/// test "Matches::next/empty_matches" {
-///   let pattern = @pcre2.compile("a*")
-///   let matches = pattern.matches("aabaa")
-///   let first = matches.next().unwrap()
-///   inspect(first[0], content="aa")
-///   let second = matches.next().unwrap()
-///   inspect(second[0], content="")  // empty match between 'b' and 'a'
-/// }
+/// let pattern = @pcre2.compile("a*")
+/// let matches = pattern.matches("aabaa")
+/// let first = matches.next().unwrap()
+/// inspect(first[0], content="aa")
+/// let second = matches.next().unwrap()
+/// inspect(second[0], content="")  // empty match between 'b' and 'a'
 /// ```
 ///
 /// ```moonbit
-/// test "Matches::next/named_groups" {
-///   let pattern = @pcre2.compile("(?P<num>\\d+)")
-///   let matches = pattern.matches("number: 42")
-///   let match_result = matches.next().unwrap()
-///   inspect(match_result["num"], content="42")
-///   inspect(match_result[0], content="42")
-/// }
+/// let pattern = @pcre2.compile("(?P<num>\\d+)")
+/// let matches = pattern.matches("number: 42")
+/// let match_result = matches.next().unwrap()
+/// inspect(match_result["num"], content="42")
+/// inspect(match_result[0], content="42")
 /// ```
-pub fn Matches::next(self : Matches) -> Match?!Pcre2Error {
+pub fn Matches::next(self : Matches) -> Match? raise Pcre2Error {
   guard self.match_data is Some(match_data) else { return None }
-  fn next() -> Match?!Pcre2Error {
+  fn next() -> Match? raise Pcre2Error {
     let rc = if self.ovector.is_null() {
       let rc = pcre2_match(
-        self.code._,
+        self.code.inner(),
         self.subject,
         self.subject_length,
         0,
@@ -544,7 +551,7 @@ pub fn Matches::next(self : Matches) -> Match?!Pcre2Error {
         }
       }
       let rc = pcre2_match(
-        self.code._,
+        self.code.inner(),
         self.subject,
         self.subject_length,
         start_offset,
@@ -574,8 +581,8 @@ pub fn Matches::next(self : Matches) -> Match?!Pcre2Error {
         self.ovector[1] = start_offset + 1 // Advance one code unit
         if self.crlf_is_newline && // If CRLF is a newline & we are at CRLF
           start_offset < self.subject_length - 1 &&
-          self.subject.charcode_at(start_offset.to_int()) == '\r' &&
-          self.subject.charcode_at(start_offset.to_int() + 1) == '\n' {
+          self.subject[start_offset.to_int()] == '\r' &&
+          self.subject[start_offset.to_int() + 1] == '\n' {
           self.ovector[1] += 1 // Advance by one more code unit
         }
         // NOTE(translator): The original code test if the UTF8 flag is set. However,
@@ -619,14 +626,13 @@ pub fn Matches::next(self : Matches) -> Match?!Pcre2Error {
       matched.code_unit_offsets[2 * i] = self.ovector[2 * i].to_int()
       matched.code_unit_offsets[2 * i + 1] = self.ovector[2 * i + 1].to_int()
     }
-    try
-      code_unit_to_character(
-        self.subject,
-        code_unit_offsets=matched.code_unit_offsets,
-        character_offsets=matched.character_offsets,
-        start_code_unit_offset=self.start_code_unit_offset,
-        start_character_offset=self.start_character_offset,
-      ) catch {
+    code_unit_to_character(
+      self.subject,
+      code_unit_offsets=matched.code_unit_offsets,
+      character_offsets=matched.character_offsets,
+      start_code_unit_offset=self.start_code_unit_offset,
+      start_character_offset=self.start_character_offset,
+    ) catch {
       error => raise Pcre2Error::Unicode(error)
     }
 
@@ -690,20 +696,18 @@ pub fn Matches::next(self : Matches) -> Match?!Pcre2Error {
 /// Example:
 ///
 /// ```moonbit
-/// test "Code::matches" {
-///   let pattern = @pcre2.compile("[0-9]+")
-///   let matches = pattern.matches("abc123def456")
-///   let first = matches.next().unwrap()
-///   inspect(first[0], content="123")
-///   let second = matches.next().unwrap()
-///   inspect(second[0], content="456")
-///   assert_true(matches.next() is None)
-/// }
+/// let pattern = @pcre2.compile("[0-9]+")
+/// let matches = pattern.matches("abc123def456")
+/// let first = matches.next().unwrap()
+/// inspect(first[0], content="123")
+/// let second = matches.next().unwrap()
+/// inspect(second[0], content="456")
+/// assert_true(matches.next() is None)
 /// ```
-pub fn Code::matches(self : Code, subject : String) -> Matches!Pcre2Error {
+pub fn Code::matches(self : Code, subject : String) -> Matches raise Pcre2Error {
   // The following code has been adapted from the pcre2demo.c file in the PCRE2
   // library.
-  let match_data = pcre2_match_data_create_from_pattern(self._, @c.none())
+  let match_data = pcre2_match_data_create_from_pattern(self.inner(), @c.none())
   let subject_length = subject.length().to_uint64()
   let crlf_is_newline = match self.newline() {
     Any | CRLF | AnyCRLF => true
@@ -734,9 +738,9 @@ pub fn Code::matches(self : Code, subject : String) -> Matches!Pcre2Error {
 pub fn substitute(
   self : Code,
   subject : String,
-  replacement : String
+  replacement : String,
 ) -> String {
-  let match_data = pcre2_match_data_create_from_pattern(self._, @c.none())
+  let match_data = pcre2_match_data_create_from_pattern(self.inner(), @c.none())
   let subject_length = subject.length().to_uint64()
   let replacement_length = replacement.length().to_uint64()
   let output_length : FixedArray[UInt64] = [subject.length().to_uint64() * 2]
@@ -745,7 +749,7 @@ pub fn substitute(
     let options = pcre2_SUBSTITUTE_OVERFLOW_LENGTH()
     let start_offset = 0UL
     let rc = pcre2_substitute(
-      self._,
+      self.inner(),
       subject,
       subject_length,
       start_offset,
