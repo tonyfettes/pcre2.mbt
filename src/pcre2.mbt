@@ -97,7 +97,7 @@ fn Code::name_count(self : Code) -> UInt raise Pcre2Error {
 
 ///|
 fn Code::name_table(self : Code) -> @c.Pointer[UInt16] raise Pcre2Error {
-  let name_table = FixedArray::make(1, @c.null())
+  let name_table = FixedArray::make(1, @c.Pointer::null())
   let result = pcre2_pattern_info_uint16_pointer(
     self.inner(),
     pcre2_INFO_NAMETABLE(),
@@ -145,6 +145,7 @@ priv type Pcre2MatchContext
 typealias UInt64 as Pcre2Size
 
 ///|
+#owned(buffer)
 extern "c" fn pcre2_get_error_message(
   error_code : Int,
   buffer : String,
@@ -152,6 +153,7 @@ extern "c" fn pcre2_get_error_message(
 ) -> Int = "moonbit_pcre2_get_error_message"
 
 ///|
+#owned(pattern, error_code, error_offset)
 extern "c" fn pcre2_compile(
   pattern : String,
   length : Pcre2Size,
@@ -162,17 +164,20 @@ extern "c" fn pcre2_compile(
 ) -> @c.Nullable[Pcre2Code] = "moonbit_pcre2_compile"
 
 ///|
+#owned(code)
 extern "c" fn pcre2_match_data_create_from_pattern(
   code : Pcre2Code,
   context : @c.Nullable[Pcre2GeneralContext],
 ) -> Pcre2MatchData = "moonbit_pcre2_match_data_create_from_pattern"
 
 ///|
+#owned(match_data)
 extern "c" fn pcre2_get_ovector_pointer(
   match_data : Pcre2MatchData,
 ) -> @c.Pointer[Pcre2Size] = "moonbit_pcre2_get_ovector_pointer"
 
 ///|
+#owned(code, subject, match_data, replacement, output_buffer, output_length)
 extern "c" fn pcre2_substitute(
   code : Pcre2Code,
   subject : String,
@@ -188,9 +193,11 @@ extern "c" fn pcre2_substitute(
 ) -> Int = "pcre2_substitute_16"
 
 ///|
+#owned(match_data)
 extern "c" fn pcre2_get_startchar(match_data : Pcre2MatchData) -> Pcre2Size = "moonbit_pcre2_get_startchar"
 
 ///|
+#owned(code, subject, match_data, context)
 extern "c" fn pcre2_match(
   code : Pcre2Code,
   subject : String,
@@ -202,6 +209,7 @@ extern "c" fn pcre2_match(
 ) -> Int = "moonbit_pcre2_match"
 
 ///|
+#owned(code, where_)
 extern "c" fn pcre2_pattern_info_uint(
   code : Pcre2Code,
   what : UInt,
@@ -209,6 +217,7 @@ extern "c" fn pcre2_pattern_info_uint(
 ) -> Int = "moonbit_pcre2_pattern_info_uint32"
 
 ///|
+#owned(code, where_)
 extern "c" fn pcre2_pattern_info_uint16_pointer(
   code : Pcre2Code,
   what : UInt,
@@ -216,7 +225,7 @@ extern "c" fn pcre2_pattern_info_uint16_pointer(
 ) -> Int = "moonbit_pcre2_pattern_info_uint16_pointer"
 
 ///|
-type Code Pcre2Code
+struct Code(Pcre2Code)
 
 ///|
 pub fn compile(pattern : String) -> Code raise Pcre2Error {
@@ -713,7 +722,7 @@ pub fn Code::matches(self : Code, subject : String) -> Matches raise Pcre2Error 
     Any | CRLF | AnyCRLF => true
     _ => false
   }
-  let ovector = @c.null()
+  let ovector = @c.Pointer::null()
   let start_code_unit_offset = 0
   let start_character_offset = 0
   let name_count = self.name_count().reinterpret_as_int()
