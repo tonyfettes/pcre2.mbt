@@ -35,3 +35,17 @@ test "split" {
   }
   @json.inspect(splits, content=["He", "'s", " a", " good", " person"])
 }
+
+///|
+test "cl100k_base" {
+  let code = @pcre2.compile(
+    "'(?i:[sdmt]|ll|ve|re)|[^\\r\\n\\p{L}\\p{N}]?+\\p{L}++|\\p{N}{1,3}+| ?[^\\s\\p{L}\\p{N}]++[\\r\\n]*+|\\s++$|\\s*[\\r\\n]|\\s+(?!\\S)|\\s",
+  )
+  let subject = "你好，世界🌍"
+  let splits = []
+  let matches = code.matches(subject)
+  while matches.next() is Some(matched) {
+    splits.push(matched[0])
+  }
+  @json.inspect(splits, content=["你好", "，世界", "🌍"])
+}

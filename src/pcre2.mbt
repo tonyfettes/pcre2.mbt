@@ -254,7 +254,6 @@ pub fn compile(pattern : String) -> Code raise Pcre2Error {
 struct Match {
   subject : String
   code_unit_offsets : FixedArray[Int]
-  character_offsets : FixedArray[Int]
   name_table : Map[String, Int]
 }
 
@@ -265,16 +264,16 @@ trait MatchIndex {
 
 ///|
 pub impl MatchIndex for Int with get(self : Match, index : Int) -> @string.View {
-  let start = self.character_offsets[index * 2]
-  let end = self.character_offsets[index * 2 + 1]
+  let start = self.code_unit_offsets[index * 2]
+  let end = self.code_unit_offsets[index * 2 + 1]
   self.subject.view(start_offset=start, end_offset=end)
 }
 
 ///|
 pub impl MatchIndex for String with get(self : Match, index : String) -> @string.View {
   let index = self.name_table.get(index).unwrap()
-  let start = self.character_offsets[index * 2]
-  let end = self.character_offsets[index * 2 + 1]
+  let start = self.code_unit_offsets[index * 2]
+  let end = self.code_unit_offsets[index * 2 + 1]
   self.subject.view(start_offset=start, end_offset=end)
 }
 
@@ -288,11 +287,11 @@ pub fn[Index : MatchIndex] Match::op_get(
 
 ///|
 pub fn Match::groups(self : Match) -> Iter2[Int, @string.View] {
-  Iter2::new(fn(yield_) {
-    for i in 0..<(self.character_offsets.length() / 2) {
-      let start = self.character_offsets[2 * i]
-      let end = self.character_offsets[2 * i + 1]
-      match yield_(i, self.subject.view(start_offset=start, end_offset=end)) {
+  Iter2::new(each => {
+    for i in 0..<(self.code_unit_offsets.length() / 2) {
+      let start = self.code_unit_offsets[2 * i]
+      let end = self.code_unit_offsets[2 * i + 1]
+      match each(i, self.subject.view(start_offset=start, end_offset=end)) {
         IterEnd => return IterEnd
         IterContinue => continue
       }
@@ -303,12 +302,11 @@ pub fn Match::groups(self : Match) -> Iter2[Int, @string.View] {
 
 ///|
 pub fn Match::named_groups(self : Match) -> Iter2[String, @string.View] {
-  Iter2::new(fn(yield_) {
+  Iter2::new(each => {
     for name, index in self.name_table {
-      let start = self.character_offsets[2 * index]
-      let end = self.character_offsets[2 * index + 1]
-      match
-        yield_(name, self.subject.view(start_offset=start, end_offset=end)) {
+      let start = self.code_unit_offsets[2 * index]
+      let end = self.code_unit_offsets[2 * index + 1]
+      match each(name, self.subject.view(start_offset=start, end_offset=end)) {
         IterEnd => return IterEnd
         IterContinue => continue
       }
@@ -380,45 +378,6 @@ fn is_trailing_surrogate(c : Int) -> Bool {
 }
 
 ///|
-fn code_unit_to_character(
-  string : String,
-  code_unit_offsets~ : FixedArray[Int],
-  character_offsets~ : FixedArray[Int],
-  start_code_unit_offset~ : Int,
-  start_character_offset~ : Int,
-) -> Unit raise UnicodeError {
-  let offsets_indices = FixedArray::makei(code_unit_offsets.length(), fn(i) {
-    i
-  })
-  offsets_indices.sort_by(fn(a, b) {
-    code_unit_offsets[a].compare(code_unit_offsets[b])
-  })
-  let mut character_offset = start_character_offset
-  let mut code_unit_offset = start_code_unit_offset
-  for oi in offsets_indices {
-    while code_unit_offset < code_unit_offsets[oi] {
-      let c1 = string[code_unit_offset]
-      if is_leading_surrogate(c1) {
-        if code_unit_offset + 1 == code_unit_offsets[oi] {
-          raise InvalidCodeUnitOffset(code_unit_offsets[oi])
-        }
-        let c2 = string[code_unit_offset + 1]
-        if is_trailing_surrogate(c2) {
-          code_unit_offset += 2
-          character_offset += 1
-        } else {
-          raise InvalidSurrogatePair
-        }
-      } else {
-        code_unit_offset += 1
-        character_offset += 1
-      }
-    }
-    character_offsets[oi] = character_offset
-  }
-}
-
-///|
 struct Matches {
   code : Code
   subject : String
@@ -427,7 +386,6 @@ struct Matches {
   crlf_is_newline : Bool
   mut ovector : @c.Pointer[Pcre2Size]
   mut start_code_unit_offset : Int
-  mut start_character_offset : Int
   name_count : Int
   name_table : @c.Pointer[UInt16]
   name_entry_size : Int
@@ -447,13 +405,11 @@ fn Matches::update_offsets(
       let c2 = self.subject[self.start_code_unit_offset + 1]
       if is_trailing_surrogate(c2) {
         self.start_code_unit_offset += 2
-        self.start_character_offset += 1
       } else {
         raise Pcre2Error::Unicode(InvalidSurrogatePair)
       }
     } else {
       self.start_code_unit_offset += 1
-      self.start_character_offset += 1
     }
   }
 }
@@ -628,21 +584,11 @@ pub fn Matches::next(self : Matches) -> Match? raise Pcre2Error {
     let matched = Match::{
       subject: self.subject,
       code_unit_offsets: FixedArray::make(2 * rc, 0),
-      character_offsets: FixedArray::make(2 * rc, 0),
       name_table: {},
     }
     for i in 0..<rc {
       matched.code_unit_offsets[2 * i] = self.ovector[2 * i].to_int()
       matched.code_unit_offsets[2 * i + 1] = self.ovector[2 * i + 1].to_int()
-    }
-    code_unit_to_character(
-      self.subject,
-      code_unit_offsets=matched.code_unit_offsets,
-      character_offsets=matched.character_offsets,
-      start_code_unit_offset=self.start_code_unit_offset,
-      start_character_offset=self.start_character_offset,
-    ) catch {
-      error => raise Pcre2Error::Unicode(error)
     }
 
     // Now we can scan the table and, for each entry, print the number, the
@@ -724,7 +670,6 @@ pub fn Code::matches(self : Code, subject : String) -> Matches raise Pcre2Error 
   }
   let ovector = @c.Pointer::null()
   let start_code_unit_offset = 0
-  let start_character_offset = 0
   let name_count = self.name_count().reinterpret_as_int()
   let name_table = self.name_table()
   let name_entry_size = self.name_entry_size().reinterpret_as_int()
@@ -736,7 +681,6 @@ pub fn Code::matches(self : Code, subject : String) -> Matches raise Pcre2Error 
     crlf_is_newline,
     ovector,
     start_code_unit_offset,
-    start_character_offset,
     name_count,
     name_table,
     name_entry_size,
