@@ -25,7 +25,7 @@ impl Show for UnicodeError
 
 // Types and methods
 type Code
-fn Code::matches(Self, String) -> Matches raise Pcre2Error
+fn Code::matches(Self, @string.View) -> Matches raise Pcre2Error
 fn Code::substitute(Self, String, String) -> String
 
 type Match

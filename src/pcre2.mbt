@@ -42,12 +42,12 @@ extern "c" fn pcre2_ANCHORED() -> UInt = "moonbit_pcre2_ANCHORED"
 
 ///|
 pub enum Pcre2Newline {
-  CR
-  LF
-  CRLF
-  Any
-  AnyCRLF
-  Nul
+  CR = 1
+  LF = 2
+  CRLF = 3
+  Any = 4
+  AnyCRLF = 5
+  Nul = 6
 }
 
 ///|
@@ -70,11 +70,7 @@ fn Pcre2Newline::of_uint(value : UInt) -> Pcre2Newline {
 ///|
 fn Code::newline(self : Code) -> Pcre2Newline raise Pcre2Error {
   let newline = FixedArray::make(1, 0U)
-  let result = pcre2_pattern_info_uint(
-    self.inner(),
-    pcre2_INFO_NEWLINE(),
-    newline,
-  )
+  let result = pcre2_pattern_info_uint(self.0, pcre2_INFO_NEWLINE(), newline)
   if result != 0 {
     raise Pcre2Error::Code(result)
   }
@@ -85,7 +81,7 @@ fn Code::newline(self : Code) -> Pcre2Newline raise Pcre2Error {
 fn Code::name_count(self : Code) -> UInt raise Pcre2Error {
   let name_count = FixedArray::make(1, 0U)
   let result = pcre2_pattern_info_uint(
-    self.inner(),
+    self.0,
     pcre2_INFO_NAMECOUNT(),
     name_count,
   )
@@ -99,7 +95,7 @@ fn Code::name_count(self : Code) -> UInt raise Pcre2Error {
 fn Code::name_table(self : Code) -> @c.Pointer[UInt16] raise Pcre2Error {
   let name_table = FixedArray::make(1, @c.Pointer::null())
   let result = pcre2_pattern_info_uint16_pointer(
-    self.inner(),
+    self.0,
     pcre2_INFO_NAMETABLE(),
     name_table,
   )
@@ -113,7 +109,7 @@ fn Code::name_table(self : Code) -> @c.Pointer[UInt16] raise Pcre2Error {
 fn Code::name_entry_size(self : Code) -> UInt raise Pcre2Error {
   let name_entry_size = FixedArray::make(1, 0U)
   let result = pcre2_pattern_info_uint(
-    self.inner(),
+    self.0,
     pcre2_INFO_NAMEENTRYSIZE(),
     name_entry_size,
   )
@@ -252,7 +248,7 @@ pub fn compile(pattern : String) -> Code raise Pcre2Error {
 
 ///|
 struct Match {
-  subject : String
+  subject : @string.View
   code_unit_offsets : FixedArray[Int]
   name_table : Map[String, Int]
 }
@@ -382,6 +378,7 @@ struct Matches {
   code : Code
   subject : String
   subject_length : Pcre2Size
+  subject_start_offset : Pcre2Size
   mut match_data : Pcre2MatchData?
   crlf_is_newline : Bool
   mut ovector : @c.Pointer[Pcre2Size]
@@ -472,10 +469,10 @@ pub fn Matches::next(self : Matches) -> Match? raise Pcre2Error {
   fn next() -> Match? raise Pcre2Error {
     let rc = if self.ovector.is_null() {
       let rc = pcre2_match(
-        self.code.inner(),
+        self.code.0,
         self.subject,
         self.subject_length,
-        0,
+        self.subject_start_offset,
         0,
         match_data,
         @c.none(),
@@ -486,7 +483,7 @@ pub fn Matches::next(self : Matches) -> Match? raise Pcre2Error {
       self.ovector = pcre2_get_ovector_pointer(match_data)
       rc
     } else {
-      let mut options = 0U // Normally no options
+      let mut options : UInt = 0 // Normally no options
       let mut start_offset = self.ovector[1] // Start at end of previous match
       self.update_offsets(start_offset.to_int())
 
@@ -516,7 +513,7 @@ pub fn Matches::next(self : Matches) -> Match? raise Pcre2Error {
         }
       }
       let rc = pcre2_match(
-        self.code.inner(),
+        self.code.0,
         self.subject,
         self.subject_length,
         start_offset,
@@ -659,11 +656,15 @@ pub fn Matches::next(self : Matches) -> Match? raise Pcre2Error {
 /// inspect(second[0], content="456")
 /// assert_true(matches.next() is None)
 /// ```
-pub fn Code::matches(self : Code, subject : String) -> Matches raise Pcre2Error {
+pub fn Code::matches(
+  self : Code,
+  subject : @string.View,
+) -> Matches raise Pcre2Error {
   // The following code has been adapted from the pcre2demo.c file in the PCRE2
   // library.
-  let match_data = pcre2_match_data_create_from_pattern(self.inner(), @c.none())
-  let subject_length = subject.length().to_uint64()
+  let match_data = pcre2_match_data_create_from_pattern(self.0, @c.none())
+  let subject_start_offset = subject.start_offset().to_uint64()
+  let subject_length = subject_start_offset + subject.length().to_uint64()
   let crlf_is_newline = match self.newline() {
     Any | CRLF | AnyCRLF => true
     _ => false
@@ -675,8 +676,9 @@ pub fn Code::matches(self : Code, subject : String) -> Matches raise Pcre2Error 
   let name_entry_size = self.name_entry_size().reinterpret_as_int()
   return Matches::{
     code: self,
-    subject,
+    subject: subject.data(),
     subject_length,
+    subject_start_offset,
     match_data: Some(match_data),
     crlf_is_newline,
     ovector,
@@ -693,7 +695,7 @@ pub fn substitute(
   subject : String,
   replacement : String,
 ) -> String {
-  let match_data = pcre2_match_data_create_from_pattern(self.inner(), @c.none())
+  let match_data = pcre2_match_data_create_from_pattern(self.0, @c.none())
   let subject_length = subject.length().to_uint64()
   let replacement_length = replacement.length().to_uint64()
   let output_length : FixedArray[UInt64] = [subject.length().to_uint64() * 2]
@@ -702,7 +704,7 @@ pub fn substitute(
     let options = pcre2_SUBSTITUTE_OVERFLOW_LENGTH()
     let start_offset = 0UL
     let rc = pcre2_substitute(
-      self.inner(),
+      self.0,
       subject,
       subject_length,
       start_offset,
