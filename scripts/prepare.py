@@ -1,6 +1,7 @@
 import shutil
 from pathlib import Path
 import json
+from typing import Literal
 
 headers = ["pcre2_internal.h"]
 
@@ -44,7 +45,12 @@ def prepend_macros(file: Path, macros: list[tuple[str, str]]):
     file.write_text(content)
 
 
-def prepare(source: Path, target: Path, code_unit_width: int = 8 | 16 | 32):
+CodeUnitWidth = Literal[8, 16, 32]
+
+
+def prepare(source: Path, target: Path, code_unit_width: CodeUnitWidth):
+    if not target.exists():
+        target.mkdir(parents=True)
     ignored: list[str] = []
     config_h_content = (source / "config.h.generic").read_text()
     config_h_content += f"""
@@ -77,17 +83,15 @@ def prepare(source: Path, target: Path, code_unit_width: int = 8 | 16 | 32):
         shutil.copy(source / s, t)
         prepend_macros(t, macros)
         ignored.append(s)
-    moon_pkg_json = json.loads((target / "moon.pkg.json").read_text())
-    moon_pkg_json["native-stub"] = sources
+    if (target / "moon.pkg.json").exists():
+        moon_pkg_json = json.loads((target / "moon.pkg.json").read_text())
+    else:
+        moon_pkg_json = {}
+    moon_pkg_json["native-stub"] = ["pcre2.c", "pcre2_chartables.c"] + sources
     (target / "moon.pkg.json").write_text(json.dumps(moon_pkg_json, indent=2))
 
-    moon_pkg_json = json.loads(Path("src/moon.pkg.json").read_text())
-    moon_pkg_json["native-stub"] = ["pcre2.c", "pcre2_chartables.c"] + [
-        str(target.relative_to("src") / s) for s in sources
-    ]
-    Path("src/moon.pkg.json").write_text(json.dumps(moon_pkg_json, indent=2) + "\n")
     ignored.sort()
-    Path("src/.gitignore").write_text("\n".join(ignored) + "\n")
+    Path(target / ".gitignore").write_text("\n".join(ignored) + "\n")
 
 
 def main():

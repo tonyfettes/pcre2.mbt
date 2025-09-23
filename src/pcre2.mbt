@@ -1,47 +1,50 @@
 ///|
-extern "c" fn pcre2_INFO_NAMECOUNT() -> UInt = "moonbit_pcre2_INFO_NAMECOUNT"
+const INFO_NAMECOUNT : UInt = 17
 
 ///|
-extern "c" fn pcre2_INFO_NAMEENTRYSIZE() -> UInt = "moonbit_pcre2_INFO_NAMEENTRYSIZE"
+const INFO_NAMEENTRYSIZE : UInt = 18
 
 ///|
-extern "c" fn pcre2_INFO_NAMETABLE() -> UInt = "moonbit_pcre2_INFO_NAMETABLE"
+const INFO_NAMETABLE : UInt = 19
 
 ///|
-extern "c" fn pcre2_INFO_NEWLINE() -> UInt = "moonbit_pcre2_INFO_NEWLINE"
+const INFO_NEWLINE : UInt = 20
 
 ///|
-extern "c" fn pcre2_NEWLINE_CR() -> UInt = "moonbit_pcre2_NEWLINE_CR"
+const NEWLINE_CR : UInt = 1
 
 ///|
-extern "c" fn pcre2_NEWLINE_CRLF() -> UInt = "moonbit_pcre2_NEWLINE_CRLF"
+const NEWLINE_LF : UInt = 2
 
 ///|
-extern "c" fn pcre2_NEWLINE_LF() -> UInt = "moonbit_pcre2_NEWLINE_LF"
+const NEWLINE_CRLF : UInt = 3
 
 ///|
-extern "c" fn pcre2_NEWLINE_ANY() -> UInt = "moonbit_pcre2_NEWLINE_ANY"
+const NEWLINE_ANY : UInt = 4
 
 ///|
-extern "c" fn pcre2_NEWLINE_ANYCRLF() -> UInt = "moonbit_pcre2_NEWLINE_ANYCRLF"
+const NEWLINE_ANYCRLF : UInt = 5
 
 ///|
-extern "c" fn pcre2_SUBSTITUTE_OVERFLOW_LENGTH() -> UInt = "moonbit_pcre2_SUBSTITUTE_OVERFLOW_LENGTH"
+const NEWLINE_NUL : UInt = 6
 
 ///|
-extern "c" fn pcre2_ERROR_NOMEMORY() -> Int = "moonbit_pcre2_ERROR_NOMEMORY"
+const SUBSTITUTE_OVERFLOW_LENGTH : UInt = 0x00001000U
 
 ///|
-extern "c" fn pcre2_ERROR_NOMATCH() -> Int = "moonbit_pcre2_ERROR_NOMATCH"
+const ERROR_NOMEMORY : Int = -48
 
 ///|
-extern "c" fn pcre2_NOTEMPTY_ATSTART() -> UInt = "moonbit_pcre2_NOTEMPTY_ATSTART"
+const ERROR_NOMATCH : Int = -1
 
 ///|
-extern "c" fn pcre2_ANCHORED() -> UInt = "moonbit_pcre2_ANCHORED"
+const NOTEMPTY_ATSTART : UInt = 0x00000008U
 
 ///|
-pub enum Pcre2Newline {
+const ANCHORED : UInt = 0x80000000U
+
+///|
+priv enum Pcre2Newline {
   CR = 1
   LF = 2
   CRLF = 3
@@ -52,71 +55,62 @@ pub enum Pcre2Newline {
 
 ///|
 fn Pcre2Newline::of_uint(value : UInt) -> Pcre2Newline {
-  if value == pcre2_NEWLINE_CR() {
-    Pcre2Newline::CR
-  } else if value == pcre2_NEWLINE_LF() {
-    Pcre2Newline::LF
-  } else if value == pcre2_NEWLINE_CRLF() {
-    Pcre2Newline::CRLF
-  } else if value == pcre2_NEWLINE_ANY() {
-    Pcre2Newline::Any
-  } else if value == pcre2_NEWLINE_ANYCRLF() {
-    Pcre2Newline::AnyCRLF
-  } else {
-    Pcre2Newline::Nul
+  match value {
+    NEWLINE_CR => Pcre2Newline::CR
+    NEWLINE_LF => Pcre2Newline::LF
+    NEWLINE_CRLF => Pcre2Newline::CRLF
+    NEWLINE_ANY => Pcre2Newline::Any
+    NEWLINE_ANYCRLF => Pcre2Newline::AnyCRLF
+    NEWLINE_NUL | _ => Pcre2Newline::Nul
   }
 }
 
 ///|
 fn Code::newline(self : Code) -> Pcre2Newline raise Pcre2Error {
-  let newline = FixedArray::make(1, 0U)
-  let result = pcre2_pattern_info_uint(self.0, pcre2_INFO_NEWLINE(), newline)
+  let newline = Ref::new(0U)
+  let result = pcre2_pattern_info_16_uint(self.0, INFO_NEWLINE, newline)
   if result != 0 {
     raise Pcre2Error::Code(result)
   }
-  Pcre2Newline::of_uint(newline[0])
+  Pcre2Newline::of_uint(newline.val)
 }
 
 ///|
 fn Code::name_count(self : Code) -> UInt raise Pcre2Error {
-  let name_count = FixedArray::make(1, 0U)
-  let result = pcre2_pattern_info_uint(
-    self.0,
-    pcre2_INFO_NAMECOUNT(),
-    name_count,
-  )
+  let name_count = Ref::new(0U)
+  let result = pcre2_pattern_info_16_uint(self.0, INFO_NAMECOUNT, name_count)
   if result != 0 {
     raise Pcre2Error::Code(result)
   }
-  name_count[0]
+  name_count.val
 }
 
 ///|
 fn Code::name_table(self : Code) -> @c.Pointer[UInt16] raise Pcre2Error {
-  let name_table = FixedArray::make(1, @c.Pointer::null())
-  let result = pcre2_pattern_info_uint16_pointer(
+  let name_table = Ref::new(@c.Pointer::null())
+  let result = pcre2_pattern_info_16_uint16_pointer(
     self.0,
-    pcre2_INFO_NAMETABLE(),
+    INFO_NAMETABLE,
     name_table,
   )
   if result != 0 {
     raise Pcre2Error::Code(result)
   }
-  name_table[0]
+  name_table.val
 }
 
 ///|
 fn Code::name_entry_size(self : Code) -> UInt raise Pcre2Error {
-  let name_entry_size = FixedArray::make(1, 0U)
-  let result = pcre2_pattern_info_uint(
+  let name_entry_size = Ref::new(0U)
+  let result = pcre2_pattern_info_16_uint(
     self.0,
-    pcre2_INFO_NAMEENTRYSIZE(),
+    INFO_NAMEENTRYSIZE,
     name_entry_size,
   )
   if result != 0 {
     raise Pcre2Error::Code(result)
   }
-  name_entry_size[0]
+  name_entry_size.val
 }
 
 ///|
@@ -142,39 +136,39 @@ typealias UInt64 as Pcre2Size
 
 ///|
 #owned(buffer)
-extern "c" fn pcre2_get_error_message(
+extern "c" fn pcre2_get_error_message_16(
   error_code : Int,
   buffer : String,
   buffer_length : Pcre2Size,
-) -> Int = "moonbit_pcre2_get_error_message"
+) -> Int = "moonbit_pcre2_get_error_message_16"
 
 ///|
 #owned(pattern, error_code, error_offset)
-extern "c" fn pcre2_compile(
+extern "c" fn pcre2_compile_16(
   pattern : String,
   length : Pcre2Size,
   options : UInt,
   error_code : FixedArray[Int],
   error_offset : FixedArray[Pcre2Size],
   context : @c.Nullable[Pcre2CompileContext],
-) -> @c.Nullable[Pcre2Code] = "moonbit_pcre2_compile"
+) -> @c.Nullable[Pcre2Code] = "moonbit_pcre2_compile_16"
 
 ///|
 #owned(code)
-extern "c" fn pcre2_match_data_create_from_pattern(
+extern "c" fn pcre2_match_data_create_from_pattern_16(
   code : Pcre2Code,
   context : @c.Nullable[Pcre2GeneralContext],
-) -> Pcre2MatchData = "moonbit_pcre2_match_data_create_from_pattern"
+) -> Pcre2MatchData = "moonbit_pcre2_match_data_create_from_pattern_16"
 
 ///|
 #owned(match_data)
-extern "c" fn pcre2_get_ovector_pointer(
+extern "c" fn pcre2_get_ovector_pointer_16(
   match_data : Pcre2MatchData,
-) -> @c.Pointer[Pcre2Size] = "moonbit_pcre2_get_ovector_pointer"
+) -> @c.Pointer[Pcre2Size] = "moonbit_pcre2_get_ovector_pointer_16"
 
 ///|
 #owned(code, subject, match_data, replacement, output_buffer, output_length)
-extern "c" fn pcre2_substitute(
+extern "c" fn pcre2_substitute_16(
   code : Pcre2Code,
   subject : String,
   length : Pcre2Size,
@@ -190,11 +184,11 @@ extern "c" fn pcre2_substitute(
 
 ///|
 #owned(match_data)
-extern "c" fn pcre2_get_startchar(match_data : Pcre2MatchData) -> Pcre2Size = "moonbit_pcre2_get_startchar"
+extern "c" fn pcre2_get_startchar_16(match_data : Pcre2MatchData) -> Pcre2Size = "moonbit_pcre2_get_startchar_16"
 
 ///|
 #owned(code, subject, match_data, context)
-extern "c" fn pcre2_match(
+extern "c" fn pcre2_match_16(
   code : Pcre2Code,
   subject : String,
   length : Pcre2Size,
@@ -202,23 +196,23 @@ extern "c" fn pcre2_match(
   options : UInt,
   match_data : Pcre2MatchData,
   context : @c.Nullable[Pcre2MatchContext],
-) -> Int = "moonbit_pcre2_match"
+) -> Int = "moonbit_pcre2_match_16"
 
 ///|
 #owned(code, where_)
-extern "c" fn pcre2_pattern_info_uint(
+extern "c" fn pcre2_pattern_info_16_uint(
   code : Pcre2Code,
   what : UInt,
-  where_ : FixedArray[UInt],
-) -> Int = "moonbit_pcre2_pattern_info_uint32"
+  where_ : Ref[UInt],
+) -> Int = "moonbit_pcre2_pattern_info_16_uint32"
 
 ///|
 #owned(code, where_)
-extern "c" fn pcre2_pattern_info_uint16_pointer(
+extern "c" fn pcre2_pattern_info_16_uint16_pointer(
   code : Pcre2Code,
   what : UInt,
-  where_ : FixedArray[@c.Pointer[UInt16]],
-) -> Int = "moonbit_pcre2_pattern_info_uint16_pointer"
+  where_ : Ref[@c.Pointer[UInt16]],
+) -> Int = "moonbit_pcre2_pattern_info_16_uint16_pointer"
 
 ///|
 struct Code(Pcre2Code)
@@ -227,7 +221,7 @@ struct Code(Pcre2Code)
 pub fn compile(pattern : String) -> Code raise Pcre2Error {
   let error_code = FixedArray::make(1, 0)
   let error_offset = FixedArray::make(1, (0 : Pcre2Size))
-  let code = pcre2_compile(
+  let code = pcre2_compile_16(
     pattern,
     pattern.length().to_uint64(),
     0,
@@ -324,7 +318,7 @@ pub impl Show for Pcre2Error with output(self : Pcre2Error, logger : &Logger) ->
   fn write_error_message(code : Int, logger : &Logger) -> Unit {
     let message = String::make(256, '\u{00}')
     let length = message.length().to_uint64()
-    let length = pcre2_get_error_message(code, message, length)
+    let length = pcre2_get_error_message_16(code, message, length)
     if length < 0 {
       logger.write_string("Unknown error")
     } else {
@@ -468,7 +462,7 @@ pub fn Matches::next(self : Matches) -> Match? raise Pcre2Error {
   guard self.match_data is Some(match_data) else { return None }
   fn next() -> Match? raise Pcre2Error {
     let rc = if self.ovector.is_null() {
-      let rc = pcre2_match(
+      let rc = pcre2_match_16(
         self.code.0,
         self.subject,
         self.subject_length,
@@ -477,10 +471,10 @@ pub fn Matches::next(self : Matches) -> Match? raise Pcre2Error {
         match_data,
         @c.none(),
       )
-      if rc == pcre2_ERROR_NOMATCH() {
+      if rc == ERROR_NOMATCH {
         return None
       }
-      self.ovector = pcre2_get_ovector_pointer(match_data)
+      self.ovector = pcre2_get_ovector_pointer_16(match_data)
       rc
     } else {
       let mut options : UInt = 0 // Normally no options
@@ -495,7 +489,7 @@ pub fn Matches::next(self : Matches) -> Match? raise Pcre2Error {
         if self.ovector[0] == self.subject_length {
           return None
         }
-        options = pcre2_NOTEMPTY_ATSTART() | pcre2_ANCHORED()
+        options = NOTEMPTY_ATSTART | ANCHORED
       } else {
         // If the previous match was not an empty string, there is one tricky case to
         // consider. If a pattern contains \K within a lookbehind assertion at the
@@ -503,8 +497,8 @@ pub fn Matches::next(self : Matches) -> Match? raise Pcre2Error {
         // started. Without special action, this leads to a loop that keeps on matching
         // the same substring. We must detect this case and arrange to move the start on
         // by one character. The pcre2_get_startchar() function returns the starting
-        // offset that was passed to pcre2_match().
-        let startchar = pcre2_get_startchar(match_data)
+        // offset that was passed to pcre2_match_16().
+        let startchar = pcre2_get_startchar_16(match_data)
         if start_offset <= startchar {
           if startchar >= self.subject_length {
             return None
@@ -512,7 +506,7 @@ pub fn Matches::next(self : Matches) -> Match? raise Pcre2Error {
           start_offset = startchar + 1
         }
       }
-      let rc = pcre2_match(
+      let rc = pcre2_match_16(
         self.code.0,
         self.subject,
         self.subject_length,
@@ -536,7 +530,7 @@ pub fn Matches::next(self : Matches) -> Match? raise Pcre2Error {
       // Otherwise we must ensure that we skip an entire UTF character if we are in
       // UTF mode.
 
-      if rc == pcre2_ERROR_NOMATCH() {
+      if rc == ERROR_NOMATCH {
         if options == 0U {
           return None // All matches found
         }
@@ -662,12 +656,12 @@ pub fn Code::matches(
 ) -> Matches raise Pcre2Error {
   // The following code has been adapted from the pcre2demo.c file in the PCRE2
   // library.
-  let match_data = pcre2_match_data_create_from_pattern(self.0, @c.none())
+  let match_data = pcre2_match_data_create_from_pattern_16(self.0, @c.none())
   let subject_start_offset = subject.start_offset().to_uint64()
   let subject_length = subject_start_offset + subject.length().to_uint64()
   let crlf_is_newline = match self.newline() {
     Any | CRLF | AnyCRLF => true
-    _ => false
+    CR | LF | Nul => false
   }
   let ovector = @c.Pointer::null()
   let start_code_unit_offset = 0
@@ -695,15 +689,15 @@ pub fn substitute(
   subject : String,
   replacement : String,
 ) -> String {
-  let match_data = pcre2_match_data_create_from_pattern(self.0, @c.none())
+  let match_data = pcre2_match_data_create_from_pattern_16(self.0, @c.none())
   let subject_length = subject.length().to_uint64()
   let replacement_length = replacement.length().to_uint64()
   let output_length : FixedArray[UInt64] = [subject.length().to_uint64() * 2]
   while true {
     let output = String::make(output_length[0].to_int(), '\u{00}')
-    let options = pcre2_SUBSTITUTE_OVERFLOW_LENGTH()
+    let options = SUBSTITUTE_OVERFLOW_LENGTH
     let start_offset = 0UL
-    let rc = pcre2_substitute(
+    let rc = pcre2_substitute_16(
       self.0,
       subject,
       subject_length,
@@ -717,7 +711,7 @@ pub fn substitute(
       output_length,
     )
     if rc < 0 {
-      if rc == pcre2_ERROR_NOMEMORY() {
+      if rc == ERROR_NOMEMORY {
         continue
       }
     }
