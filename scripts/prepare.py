@@ -67,17 +67,18 @@ def prepare(source: Path, target: Path, code_unit_width: int = 8 | 16 | 32):
     ignored.append("pcre2_chartables.c")
     for h in source.glob("*.h"):
         t = target / (h.relative_to(source))
-        print(f"COPY {s} -> {target}")
+        print(f"COPY {h} -> {t}")
         shutil.copy(h, t)
         ignored.append(h.relative_to(source).as_posix())
 
     for s in sources:
         t = target / s
-        print(f"COPY {s} -> {target}")
+        print(f"COPY {s} -> {t}")
         shutil.copy(source / s, t)
         prepend_macros(t, macros)
         ignored.append(s)
-    moon_pkg_json = {"import": ["tonyfettes/c"], "native-stub": sources}
+    moon_pkg_json = json.loads((target / "moon.pkg.json").read_text())
+    moon_pkg_json["native-stub"] = sources
     (target / "moon.pkg.json").write_text(json.dumps(moon_pkg_json, indent=2))
 
     moon_pkg_json = json.loads(Path("src/moon.pkg.json").read_text())
