@@ -148,8 +148,8 @@ extern "c" fn pcre2_compile_16(
   pattern : String,
   length : Pcre2Size,
   options : UInt,
-  error_code : FixedArray[Int],
-  error_offset : FixedArray[Pcre2Size],
+  error_code : Ref[Int],
+  error_offset : Ref[Pcre2Size],
   context : @c.Nullable[Pcre2CompileContext],
 ) -> @c.Nullable[Pcre2Code] = "moonbit_pcre2_compile_16"
 
@@ -221,8 +221,8 @@ struct Code(Pcre2Code)
 
 ///|
 pub fn compile(pattern : String) -> Code raise Pcre2Error {
-  let error_code = FixedArray::make(1, 0)
-  let error_offset = FixedArray::make(1, (0 : Pcre2Size))
+  let error_code = Ref::new(0)
+  let error_offset = Ref::new((0 : Pcre2Size))
   let code = pcre2_compile_16(
     pattern,
     pattern.length().to_uint64(),
@@ -234,10 +234,10 @@ pub fn compile(pattern : String) -> Code raise Pcre2Error {
   match code {
     Some(code) => code
     None =>
-      if error_code[0] > 0 {
-        raise Pcre2Error::Compile(pattern, error_code[0], error_offset[0])
+      if error_code.val > 0 {
+        raise Pcre2Error::Compile(pattern, error_code.val, error_offset.val)
       } else {
-        raise Pcre2Error::Code(error_code[0])
+        raise Pcre2Error::Code(error_code.val)
       }
   }
 }
@@ -329,7 +329,6 @@ pub fn Match::named_groups(self : Match) -> Iter2[String, StringView] {
 ///|
 pub suberror Pcre2Error {
   LookaroundBSK
-  Unicode(UnicodeError)
   Compile(String, Int, Pcre2Size)
   Code(Int)
 }
@@ -349,7 +348,6 @@ pub impl Show for Pcre2Error with output(self : Pcre2Error, logger : &Logger) ->
 
   match self {
     LookaroundBSK => logger.write_string("Lookaround BSK")
-    Unicode(error) => logger.write_string("Unicode error: \{error}")
     Compile(pattern, code, offset) => {
       logger.write_string("Compilation error @ \{offset}: ")
       write_error_message(code, logger)
@@ -373,22 +371,6 @@ pub impl Show for Pcre2Error with output(self : Pcre2Error, logger : &Logger) ->
 fn array_to_string(array : FixedArray[UInt16]) -> String = "%identity"
 
 ///|
-pub suberror UnicodeError {
-  InvalidCodeUnitOffset(Int)
-  InvalidSurrogatePair
-} derive(Show)
-
-///|
-fn is_leading_surrogate(c : Int) -> Bool {
-  c is (0xD800..=0xDBFF)
-}
-
-///|
-fn is_trailing_surrogate(c : Int) -> Bool {
-  c is (0xDC00..=0xDFFF)
-}
-
-///|
 struct Matches {
   code : Code
   subject : String
@@ -397,33 +379,9 @@ struct Matches {
   mut match_data : Pcre2MatchData?
   crlf_is_newline : Bool
   mut ovector : @c.Pointer[Pcre2Size]
-  mut start_code_unit_offset : Int
   name_count : Int
   name_table : @c.Pointer[UInt16]
   name_entry_size : Int
-}
-
-///|
-fn Matches::update_offsets(
-  self : Matches,
-  offset : Int,
-) -> Unit raise Pcre2Error {
-  while self.start_code_unit_offset < offset {
-    let c1 = self.subject[self.start_code_unit_offset]
-    if is_leading_surrogate(c1) {
-      if self.start_code_unit_offset + 1 == offset {
-        raise Pcre2Error::Unicode(InvalidCodeUnitOffset(offset))
-      }
-      let c2 = self.subject[self.start_code_unit_offset + 1]
-      if is_trailing_surrogate(c2) {
-        self.start_code_unit_offset += 2
-      } else {
-        raise Pcre2Error::Unicode(InvalidSurrogatePair)
-      }
-    } else {
-      self.start_code_unit_offset += 1
-    }
-  }
 }
 
 ///|
@@ -500,7 +458,6 @@ pub fn Matches::next(self : Matches) -> Match? raise Pcre2Error {
     } else {
       let mut options : UInt = 0 // Normally no options
       let mut start_offset = self.ovector[1] // Start at end of previous match
-      self.update_offsets(start_offset.to_int())
 
       // If the previous match was for an empty string, we are finished if we are
       // at the end of the subject. Otherwise, arrange to run another match at the
@@ -685,7 +642,6 @@ pub fn Code::matches(
     CR | LF | Nul => false
   }
   let ovector = @c.Pointer::null()
-  let start_code_unit_offset = 0
   let name_count = self.name_count().reinterpret_as_int()
   let name_table = self.name_table()
   let name_entry_size = self.name_entry_size().reinterpret_as_int()
@@ -697,7 +653,6 @@ pub fn Code::matches(
     match_data: Some(match_data),
     crlf_is_newline,
     ovector,
-    start_code_unit_offset,
     name_count,
     name_table,
     name_entry_size,
