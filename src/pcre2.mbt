@@ -745,3 +745,32 @@ pub fn substitute(
     abort("unreachable")
   }
 }
+
+///|
+const CONFIG_JIT : UInt = 1
+
+///|
+#owned(where_)
+extern "c" fn pcre2_config_16_int(what : UInt, where_ : Ref[Int]) -> Int = "moonbit_pcre2_config_16_int"
+
+///|
+pub fn config_jit() -> Bool raise {
+  let val = Ref::new(0)
+  let rc = pcre2_config_16_int(CONFIG_JIT, val)
+  if rc != 0 {
+    raise Pcre2Error::Code(rc)
+  }
+  val.val is 1
+}
+
+///|
+#owned(code)
+extern "c" fn pcre2_jit_compile(code : Pcre2Code, options : UInt) -> Int = "moonbit_pcre2_jit_compile_16"
+
+///|
+pub fn Code::jit_compile(code : Code) -> Unit raise Pcre2Error {
+  let rc = pcre2_jit_compile(code.0, 0)
+  if rc != 0 {
+    raise Pcre2Error::Code(rc)
+  }
+}

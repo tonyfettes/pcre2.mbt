@@ -4,6 +4,8 @@ package "tonyfettes/pcre2"
 // Values
 fn compile(String) -> Code raise Pcre2Error
 
+fn config_jit() -> Bool raise
+
 // Errors
 pub suberror Pcre2Error {
   LookaroundBSK
@@ -21,8 +23,9 @@ impl Show for UnicodeError
 
 // Types and methods
 type Code
+fn Code::jit_compile(Self) -> Unit raise Pcre2Error
 fn Code::matches(Self, StringView) -> Matches raise Pcre2Error
-fn Code::substitute(Self, String, String) -> String
+fn Code::substitute(Self, StringView, StringView, global? : Bool) -> StringView raise
 
 type Match
 fn[Index : MatchIndex] Match::get(Self, Index) -> StringView?

@@ -1,6 +1,5 @@
 target/
 .mooncakes/
-.DS_Store
 /publish/
-/build/
-/install/
+/deps/
+compile_flags.txt

@@ -58,6 +58,7 @@ def prepare(source: Path, target: Path, code_unit_width: CodeUnitWidth):
 #define HAVE_STRERROR 1
 #define SUPPORT_PCRE2_{code_unit_width} 1
 #define SUPPORT_UNICODE 1
+#define SUPPORT_JIT 1
 """
     (target / "config.h").write_text(config_h_content)
     ignored.append("config.h")
@@ -96,6 +97,8 @@ def prepare(source: Path, target: Path, code_unit_width: CodeUnitWidth):
 
 def main():
     prepare(Path("src/pcre2/src"), Path("src"), code_unit_width=16)
+    # JIT support
+    shutil.copytree(Path("src/pcre2/deps"), Path("deps"))
 
 
 if __name__ == "__main__":

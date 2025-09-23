@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <time.h>
 #define PCRE2_CODE_UNIT_WIDTH 16
 #include "pcre2.h"
 #include <moonbit.h>
@@ -174,5 +175,17 @@ moonbit_pcre2_substitute_16(
   moonbit_decref(replacement);
   moonbit_decref(output_buffer);
   moonbit_decref(output_length);
+  return result;
+}
+
+int32_t
+moonbit_pcre2_config_16_int(uint32_t what, int32_t *where) {
+  return pcre2_config_16(what, where);
+}
+
+int32_t
+moonbit_pcre2_jit_compile_16(moonbit_pcre2_code_16 *code, uint32_t options) {
+  int32_t result = pcre2_jit_compile_16(code->code, options);
+  moonbit_decref(code);
   return result;
 }
