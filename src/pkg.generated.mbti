@@ -25,6 +25,7 @@ fn Code::matches(Self, StringView) -> Matches raise Pcre2Error
 fn Code::substitute(Self, String, String) -> String
 
 type Match
+fn[Index : MatchIndex] Match::get(Self, Index) -> StringView?
 fn Match::groups(Self) -> Iter2[Int, StringView]
 fn Match::named_groups(Self) -> Iter2[String, StringView]
 fn[Index : MatchIndex] Match::op_get(Self, Index) -> StringView
@@ -38,4 +39,5 @@ fn Matches::next(Self) -> Match? raise Pcre2Error
 trait MatchIndex
 impl MatchIndex for Int
 impl MatchIndex for String
+impl MatchIndex for StringView
 
