@@ -29,10 +29,10 @@ const NEWLINE_ANYCRLF : UInt = 5
 const NEWLINE_NUL : UInt = 6
 
 ///|
-const SUBSTITUTE_OVERFLOW_LENGTH : UInt = 0x00001000U
+const SUBSTITUTE_GLOBAL : UInt = 0x00000100U
 
 ///|
-const ERROR_NOMEMORY : Int = -48
+const SUBSTITUTE_OVERFLOW_LENGTH : UInt = 0x00001000U
 
 ///|
 const ERROR_NOMATCH : Int = -1
@@ -171,16 +171,18 @@ extern "c" fn pcre2_get_ovector_pointer_16(
 extern "c" fn pcre2_substitute_16(
   code : Pcre2Code,
   subject : String,
-  length : Pcre2Size,
+  subject_offset : Pcre2Size,
+  subject_length : Pcre2Size,
   start_offset : Pcre2Size,
   options : UInt,
   match_data : Pcre2MatchData,
   match_context : @c.Nullable[Pcre2MatchContext],
   replacement : String,
+  replacement_offset : Pcre2Size,
   replacement_length : Pcre2Size,
   output_buffer : String,
-  output_length : FixedArray[Pcre2Size],
-) -> Int = "pcre2_substitute_16"
+  output_length : Ref[Pcre2Size],
+) -> Int = "moonbit_pcre2_substitute_16"
 
 ///|
 #owned(match_data)
@@ -705,36 +707,40 @@ pub fn Code::matches(
 ///|
 pub fn substitute(
   self : Code,
-  subject : String,
-  replacement : String,
-) -> String {
+  subject : StringView,
+  replacement : StringView,
+  global? : Bool = false,
+) -> StringView raise {
   let match_data = pcre2_match_data_create_from_pattern_16(self.0, @c.none())
   let subject_length = subject.length().to_uint64()
   let replacement_length = replacement.length().to_uint64()
-  let output_length : FixedArray[UInt64] = [subject.length().to_uint64() * 2]
+  let output_length : Ref[UInt64] = Ref::new(subject.length().to_uint64() * 2)
   while true {
-    let output = String::make(output_length[0].to_int(), '\u{00}')
-    let options = SUBSTITUTE_OVERFLOW_LENGTH
+    let output = String::make(output_length.val.to_int(), '\u{00}')
+    let mut options = SUBSTITUTE_OVERFLOW_LENGTH
+    if global {
+      options = options | SUBSTITUTE_GLOBAL
+    }
     let start_offset = 0UL
     let rc = pcre2_substitute_16(
       self.0,
-      subject,
+      subject.data(),
+      subject.start_offset().to_uint64(),
       subject_length,
       start_offset,
       options,
       match_data,
-      @c.none(),
-      replacement,
+      @c.Nullable::none(),
+      replacement.data(),
+      replacement.start_offset().to_uint64(),
       replacement_length,
       output,
       output_length,
     )
     if rc < 0 {
-      if rc == ERROR_NOMEMORY {
-        continue
-      }
+      raise Pcre2Error::Code(rc)
     }
-    break output
+    break output.view(end_offset=output_length.val.to_int())
   } else {
     abort("unreachable")
   }

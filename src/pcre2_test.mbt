@@ -65,3 +65,40 @@ test "cl100k_base/view" {
   }
   @json.inspect(splits, content=["你好", "，世界", "🌍"])
 }
+
+///|
+test "substitution" {
+  let code = @pcre2.compile("\\b(\\w+)\\b")
+  let subject = "Hello world!"
+  let matches = code.matches(subject)
+  let results = []
+  while matches.next() is Some(matched) {
+    results.push(matched[0].to_string())
+  }
+  @json.inspect(results, content=["Hello", "world"])
+  @json.inspect(
+    code.substitute(subject, "<$1>", global=true),
+    content="<Hello> <world>!",
+  )
+}
+
+///|
+test "substitution/view" {
+  let code = @pcre2.compile("\\b(\\w+)\\b")
+  let subject = "Hello world!"
+  let subject = subject[6:11]
+  @json.inspect(subject, content="world")
+  let matches = code.matches(subject)
+  let results = []
+  while matches.next() is Some(matched) {
+    results.push(matched[0].to_string())
+  }
+  @json.inspect(results, content=["world"])
+  let replacement = "<<$1>>"
+  let replacement = replacement[1:5]
+  @json.inspect(replacement, content="<$1>")
+  @json.inspect(
+    code.substitute(subject, replacement, global=true),
+    content="<world>",
+  )
+}

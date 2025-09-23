@@ -145,3 +145,34 @@ moonbit_pcre2_pattern_info_16_uint16_pointer(
   moonbit_decref(where);
   return result;
 }
+
+int32_t
+moonbit_pcre2_substitute_16(
+  moonbit_pcre2_code_16 *code,
+  moonbit_string_t subject,
+  uint64_t subject_offset,
+  uint64_t subject_length,
+  uint64_t start_offset,
+  uint32_t options,
+  moonbit_pcre2_match_data_16 *match_data,
+  pcre2_match_context_16 *match_context,
+  moonbit_string_t replacement,
+  uint64_t replacement_offset,
+  uint64_t replacement_length,
+  moonbit_string_t output_buffer,
+  uint64_t *output_length
+) {
+  int32_t result = pcre2_substitute_16(
+    code->code, (subject + subject_offset), subject_length, start_offset,
+    options, match_data->match_data, match_context,
+    (replacement + replacement_offset), replacement_length, output_buffer,
+    output_length
+  );
+  moonbit_decref(code);
+  moonbit_decref(subject);
+  moonbit_decref(match_data);
+  moonbit_decref(replacement);
+  moonbit_decref(output_buffer);
+  moonbit_decref(output_length);
+  return result;
+}
