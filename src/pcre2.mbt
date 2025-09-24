@@ -660,7 +660,7 @@ pub fn Code::matches(
 }
 
 ///|
-pub fn substitute(
+pub fn Code::substitute(
   self : Code,
   subject : StringView,
   replacement : StringView,

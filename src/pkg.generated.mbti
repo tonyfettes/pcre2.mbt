@@ -9,17 +9,10 @@ fn config_jit() -> Bool raise
 // Errors
 pub suberror Pcre2Error {
   LookaroundBSK
-  Unicode(UnicodeError)
   Compile(String, Int, UInt64)
   Code(Int)
 }
 impl Show for Pcre2Error
-
-pub suberror UnicodeError {
-  InvalidCodeUnitOffset(Int)
-  InvalidSurrogatePair
-}
-impl Show for UnicodeError
 
 // Types and methods
 type Code
