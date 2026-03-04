@@ -1,16 +1,14 @@
-{
-  "import": [
-    "tonyfettes/c",
-    "tonyfettes/c/pointer"
-  ],
-  "targets": {
-    "pcre2.mbt": [
-      "native"
-    ],
-    "pcre2_test.mbt": [
-      "native"
-    ]
-  },
+import {
+  "moonbitlang/core/cmp",
+  "tonyfettes/c",
+  "tonyfettes/c/pointer",
+}
+
+import {
+  "moonbitlang/core/bench",
+} for "test"
+
+options(
   "native-stub": [
     "pcre2.c",
     "pcre2_chartables.c",
@@ -43,6 +41,7 @@
     "pcre2_tables.c",
     "pcre2_ucd.c",
     "pcre2_valid_utf.c",
-    "pcre2_xclass.c"
-  ]
-}
+    "pcre2_xclass.c",
+  ],
+  targets: { "pcre2.mbt": [ "native" ], "pcre2_test.mbt": [ "native" ] },
+)

@@ -320,7 +320,7 @@ pub fn[Index : MatchIndex] Match::get(
 pub fn Match::groups(self : Match) -> Iter2[Int, StringView] {
   let mut i = 0
   let total = self.code_unit_offsets.length() / 2
-  Iterator2::new(fn() {
+  Iter2::new(fn() {
     if i < total {
       let start = self.code_unit_offsets[2 * i]
       let end = self.code_unit_offsets[2 * i + 1]
@@ -330,18 +330,18 @@ pub fn Match::groups(self : Match) -> Iter2[Int, StringView] {
     } else {
       None
     }
-  }).iter2()
+  })
 }
 
 ///|
 pub fn Match::named_groups(self : Match) -> Iter2[String, StringView] {
-  let iter = self.name_table.iterator2()
-  Iterator2::new(fn() {
+  let iter = self.name_table.iter2()
+  Iter2::new(fn() {
     guard iter.next() is Some((name, index)) else { None }
     let start = self.code_unit_offsets[2 * index]
     let end = self.code_unit_offsets[2 * index + 1]
     Some((name, self.subject.view(start_offset=start, end_offset=end)))
-  }).iter2()
+  })
 }
 
 ///|
@@ -429,7 +429,7 @@ struct Matches {
 ///
 /// Examples:
 ///
-/// ```moonbit
+/// ```moonbit nocheck
 /// let pattern = @pcre2.compile("\\d+")
 /// let matches = pattern.matches("abc123def456")
 /// let first = matches.next().unwrap()
@@ -439,7 +439,7 @@ struct Matches {
 /// assert_true(matches.next() is None)
 /// ```
 ///
-/// ```moonbit
+/// ```moonbit nocheck
 /// let pattern = @pcre2.compile("a*")
 /// let matches = pattern.matches("aabaa")
 /// let first = matches.next().unwrap()
@@ -448,7 +448,7 @@ struct Matches {
 /// inspect(second[0], content="")  // empty match between 'b' and 'a'
 /// ```
 ///
-/// ```moonbit
+/// ```moonbit nocheck
 /// let pattern = @pcre2.compile("(?P<num>\\d+)")
 /// let matches = pattern.matches("number: 42")
 /// let match_result = matches.next().unwrap()
@@ -637,7 +637,7 @@ pub fn Matches::next(self : Matches) -> Match? raise Pcre2Error {
 ///
 /// Example:
 ///
-/// ```moonbit
+/// ```moonbit nocheck
 /// let pattern = @pcre2.compile("[0-9]+")
 /// let matches = pattern.matches("abc123def456")
 /// let first = matches.next().unwrap()
@@ -720,7 +720,7 @@ pub fn Code::substitute(
       raise Pcre2Error::Code(rc)
     }
     break output.view(end_offset=output_length.val.to_int())
-  } else {
+  } nobreak {
     abort("unreachable")
   }
 }

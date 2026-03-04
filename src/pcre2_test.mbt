@@ -9,7 +9,7 @@ test "captures" {
       views.push(capture.to_string())
     }
   }
-  @json.inspect(views, content=["hello", "hello"])
+  json_inspect(views, content=["hello", "hello"])
 }
 
 ///|
@@ -17,7 +17,7 @@ test "named_groups" {
   let code = @pcre2.compile("(?<num>\\d+)")
   let matches = code.matches("number: 42")
   let match_result = matches.next().unwrap()
-  @json.inspect(match_result["num"], content="42")
+  json_inspect(match_result["num"], content="42")
 }
 
 ///|
@@ -33,7 +33,7 @@ test "split" {
       splits.push(capture.to_string())
     }
   }
-  @json.inspect(splits, content=["He", "'s", " a", " good", " person"])
+  json_inspect(splits, content=["He", "'s", " a", " good", " person"])
 }
 
 ///|
@@ -47,7 +47,7 @@ test "cl100k_base" {
   while matches.next() is Some(matched) {
     splits.push(matched[0])
   }
-  @json.inspect(splits, content=["你好", "，世界", "🌍"])
+  json_inspect(splits, content=["你好", "，世界", "🌍"])
 }
 
 ///|
@@ -57,13 +57,13 @@ test "cl100k_base/view" {
   )
   let subject = "abcdefg你好，世界🌍"
   let subject = subject[7:]
-  @json.inspect(subject, content="你好，世界🌍")
+  json_inspect(subject, content="你好，世界🌍")
   let splits = []
   let matches = code.matches(subject)
   while matches.next() is Some(matched) {
     splits.push(matched[0])
   }
-  @json.inspect(splits, content=["你好", "，世界", "🌍"])
+  json_inspect(splits, content=["你好", "，世界", "🌍"])
 }
 
 ///|
@@ -75,8 +75,8 @@ test "substitution" {
   while matches.next() is Some(matched) {
     results.push(matched[0].to_string())
   }
-  @json.inspect(results, content=["Hello", "world"])
-  @json.inspect(
+  json_inspect(results, content=["Hello", "world"])
+  json_inspect(
     code.substitute(subject, "<$1>", global=true),
     content="<Hello> <world>!",
   )
@@ -87,17 +87,17 @@ test "substitution/view" {
   let code = @pcre2.compile("\\b(\\w+)\\b")
   let subject = "Hello world!"
   let subject = subject[6:11]
-  @json.inspect(subject, content="world")
+  json_inspect(subject, content="world")
   let matches = code.matches(subject)
   let results = []
   while matches.next() is Some(matched) {
     results.push(matched[0].to_string())
   }
-  @json.inspect(results, content=["world"])
+  json_inspect(results, content=["world"])
   let replacement = "<<$1>>"
   let replacement = replacement[1:5]
-  @json.inspect(replacement, content="<$1>")
-  @json.inspect(
+  json_inspect(replacement, content="<$1>")
+  json_inspect(
     code.substitute(subject, replacement, global=true),
     content="<world>",
   )
@@ -115,7 +115,7 @@ test "jit_compile" {
       views.push(capture.to_string())
     }
   }
-  @json.inspect(views, content=["hello", "hello"])
+  json_inspect(views, content=["hello", "hello"])
 }
 
 ///|
@@ -129,21 +129,25 @@ test "cl100k_base/jit_compile" (b : @bench.T) {
     #|Within most of the northwestern Pacific, there are no official typhoon seasons as tropical cyclones form throughout the year. Like any tropical cyclone, there are several main requirements for typhoon formation and development. It must be in sufficiently warm sea surface temperatures, atmospheric instability, high humidity in the lower-to-middle levels of the troposphere, have enough Coriolis effect to develop a low pressure centre, a pre-existing low level focus or disturbance, and a low vertical wind shear. Although the majority of storms form between June and November, a few storms may occur between December and May (although tropical cyclone formation is very rare during that time). On average, the northwestern Pacific features the most numerous and intense tropical cyclones globally. Like other basins, they are steered by the subtropical ridge towards the west or northwest, with some systems recurving near and east of Japan. The Philippines receive the brunt of the landfalls, with China and Japan being less often impacted. However, some of the deadliest typhoons in history have struck China. Southern China has the longest record of typhoon impacts for the region, with a thousand-year sample via documents within their archives. Taiwan has received the wettest known typhoon on record for the northwest Pacific tropical cyclone basins. However, Vietnam recognises its typhoon season as lasting from the beginning of June through to the end of November, with an average of four to six typhoons hitting the country annually.[4][5]
     #|
     #|According to the statistics of the Joint Typhoon Warning Center, from 1950 to 2022, the Northwest Pacific generated an average of 26.5 named tropical cyclones each year, of which an average of 16.6 reached typhoon standard or above as defined by the Joint Typhoon Warning Center.[6]"
-  b.bench(name="baseline", () => try {
-    let matches = code.matches(subject)
-    while matches.next() is Some(_) {
-      // do nothing
+  b.bench(name="baseline", () => {
+    try {
+      let matches = code.matches(subject)
+      while matches.next() is Some(_) {
+        // do nothing
+      }
+    } catch {
+      _ => ()
     }
-  } catch {
-    _ => ()
   })
   code.jit_compile()
-  b.bench(name="jit", () => try {
-    let matches = code.matches(subject)
-    while matches.next() is Some(_) {
-      // do nothing
+  b.bench(name="jit", () => {
+    try {
+      let matches = code.matches(subject)
+      while matches.next() is Some(_) {
+        // do nothing
+      }
+    } catch {
+      _ => ()
     }
-  } catch {
-    _ => ()
   })
 }
